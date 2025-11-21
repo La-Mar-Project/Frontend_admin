@@ -1,0 +1,3916 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Default module",
+    "description": "",
+    "version": "1.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/users/me/profile": {
+      "get": {
+        "summary": "내 프로필 보기",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseMyProfileResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "username": "",
+                    "nickname": "",
+                    "grade": "",
+                    "phone": "",
+                    "coupons": [
+                      {
+                        "type": "",
+                        "expiresAt": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me/reservations": {
+      "get": {
+        "summary": "내 예약 조회",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "process",
+            "in": "query",
+            "description": "취소 내역만, 예약 내역만",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponsePageResponseReservationSimpleDto"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "content": [
+                      {
+                        "reservationId": 0,
+                        "totalPrice": 0,
+                        "process": {
+                          "outputWriter": {
+                            "writeBuffer": [
+                              ""
+                            ],
+                            "lock": {},
+                            "out": {
+                              "writeBuffer": [
+                                ""
+                              ],
+                              "lock": {}
+                            },
+                            "cb": [
+                              ""
+                            ],
+                            "nChars": 0,
+                            "nextChar": 0,
+                            "maxChars": 0
+                          },
+                          "outputCharset": {
+                            "name": "",
+                            "aliases": [
+                              ""
+                            ],
+                            "aliasSet": [
+                              ""
+                            ]
+                          },
+                          "inputReader": {
+                            "lock": {},
+                            "skipBuffer": [
+                              ""
+                            ],
+                            "in": {
+                              "lock": {},
+                              "skipBuffer": [
+                                ""
+                              ]
+                            },
+                            "cb": [
+                              ""
+                            ],
+                            "nChars": 0,
+                            "nextChar": 0,
+                            "markedChar": 0,
+                            "readAheadLimit": 0,
+                            "skipLF": false,
+                            "markedSkipLF": false
+                          },
+                          "inputCharset": {
+                            "name": "",
+                            "aliases": [
+                              ""
+                            ],
+                            "aliasSet": [
+                              ""
+                            ]
+                          },
+                          "errorReader": {
+                            "lock": {},
+                            "skipBuffer": [
+                              ""
+                            ],
+                            "in": {
+                              "lock": {},
+                              "skipBuffer": [
+                                ""
+                              ]
+                            },
+                            "cb": [
+                              ""
+                            ],
+                            "nChars": 0,
+                            "nextChar": 0,
+                            "markedChar": 0,
+                            "readAheadLimit": 0,
+                            "skipLF": false,
+                            "markedSkipLF": false
+                          },
+                          "errorCharset": {
+                            "name": "",
+                            "aliases": [
+                              ""
+                            ],
+                            "aliasSet": [
+                              ""
+                            ]
+                          }
+                        },
+                        "shipFishType": "",
+                        "scheduleDeparture": ""
+                      }
+                    ],
+                    "page": 0,
+                    "size": 0,
+                    "totalElements": 0,
+                    "totalPages": 0,
+                    "first": false,
+                    "last": false,
+                    "hasNext": false,
+                    "hasPrevious": false
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/users/me/reservatiaons/{reservationId}": {
+      "get": {
+        "summary": "내 예약/취소 상세 조회 (인증 후, 보류)",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "process": {
+                      "type": "string",
+                      "enum": [
+                        "RESERVE_COMPLETED",
+                        "DEPOSIT_COMPLETED",
+                        "CANCEL_REQUESTED",
+                        "CANCEL_COMPLETED"
+                      ],
+                      "description": "예약 상태"
+                    },
+                    "totalPrice": {
+                      "type": "integer",
+                      "description": "총 예약금"
+                    },
+                    "schedule": {
+                      "type": "object",
+                      "properties": {
+                        "fishType": {
+                          "type": "string",
+                          "description": "어종"
+                        },
+                        "shipPrice": {
+                          "type": "integer",
+                          "description": "승선비"
+                        },
+                        "departure": {
+                          "type": "string",
+                          "description": "출항 일시"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "WAITING",
+                            "CONFIRMED",
+                            "DELAYED",
+                            "CANCELED"
+                          ],
+                          "description": "출항 상태"
+                        }
+                      },
+                      "required": [
+                        "fishType",
+                        "shipPrice",
+                        "status",
+                        "departure"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "process",
+                    "totalPrice",
+                    "schedule"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/main": {
+      "get": {
+        "summary": "출항 일정 검색(메인페이지 조회) (완)",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "범위 시작일",
+            "required": false,
+            "example": "{{$date.isoTimestamp}}",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "범위 종료일",
+            "required": false,
+            "example": "{{$date.isoTimestamp}}",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "departure": {
+                        "type": "string",
+                        "description": "츨항일"
+                      },
+                      "remainingHeadCount": {
+                        "type": "integer",
+                        "description": "잔여 인원"
+                      },
+                      "tide": {
+                        "type": "integer",
+                        "description": "물때"
+                      },
+                      "fishType": {
+                        "type": "string",
+                        "description": "어종"
+                      },
+                      "price": {
+                        "type": "integer",
+                        "description": "승선비"
+                      },
+                      "id": {
+                        "type": "integer",
+                        "description": "식별자"
+                      },
+                      "status": {
+                        "type": "string",
+                        "description": "출항 상태"
+                      },
+                      "type": {
+                        "type": "string",
+                        "description": "예약 상태"
+                      }
+                    },
+                    "required": [
+                      "fishType",
+                      "price",
+                      "tide",
+                      "departure",
+                      "remainingHeadCount",
+                      "id",
+                      "status",
+                      "type"
+                    ]
+                  },
+                  "minItems": 1,
+                  "maxItems": 31
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}": {
+      "get": {
+        "summary": "출항 일정 상세보기",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseScheduleDetailResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "ship": {
+                      "shipId": 0,
+                      "fishType": "",
+                      "price": 0,
+                      "notification": ""
+                    },
+                    "schedule": {
+                      "schedulePublicId": "",
+                      "departure": "",
+                      "tide": 0,
+                      "remainCount": 0
+                    },
+                    "reservations": [
+                      {
+                        "reservationPublicId": "",
+                        "nickname": "",
+                        "grade": "",
+                        "headCount": 0,
+                        "process": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "delete": {
+        "summary": "출항 일정 삭제",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/reservation/early": {
+      "get": {
+        "summary": "선예약 팝업 조회",
+        "deprecated": false,
+        "description": "userId, userName, userNickname, userGrade는 모두 토큰에 담겨서 들어갑니다. 프론트가 알아서 뜯어야합니다.",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "schbfFCIOBlTWi2-0pT",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseEarlyReservationPopupResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "ship": {
+                      "fishType": "",
+                      "price": 0,
+                      "notification": ""
+                    },
+                    "user": {
+                      "username": "",
+                      "nickname": "",
+                      "grade": "",
+                      "phone": "",
+                      "coupons": [
+                        {
+                          "couponId": 0,
+                          "type": "",
+                          "expiresAt": ""
+                        }
+                      ]
+                    },
+                    "schedulePublicId": "",
+                    "remainHeadCount": 0,
+                    "departure": "",
+                    "dayOfWeek": "",
+                    "tide": 0
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/reservation/normal": {
+      "get": {
+        "summary": "일반예약 팝업 조회",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": "schbfFCIOBlTWi2-0pT",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseEarlyReservationPopupResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "ship": {
+                      "fishType": "",
+                      "price": 0,
+                      "notification": ""
+                    },
+                    "user": {
+                      "username": "",
+                      "nickname": "",
+                      "grade": "",
+                      "phone": "",
+                      "coupons": [
+                        {
+                          "couponId": 0,
+                          "type": "",
+                          "expiresAt": ""
+                        }
+                      ]
+                    },
+                    "schedulePublicId": "",
+                    "remainHeadCount": 0,
+                    "departure": "",
+                    "dayOfWeek": "",
+                    "tide": 0
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/reservation": {
+      "post": {
+        "summary": "예약",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarlyReservationPopupRequest",
+                "description": ""
+              },
+              "example": {
+                "username": "원종윤",
+                "nickname": "마징가제트",
+                "phone": "010-1234-5678",
+                "HeadCount": 3,
+                "request": "어머니 한 분 계십니다.",
+                "couponId": null
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseReservationCreateResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "reservationPublicId": ""
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/": {
+      "get": {
+        "summary": "예약 신청 결과 조회",
+        "deprecated": true,
+        "description": "관리자 - 예약 상세 조회와 동일 (재활용)",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "summary": "출항 일정 상세 조회",
+        "deprecated": true,
+        "description": "사용자 - 출항 일정 상세 조회 재활용",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/reservation/{reservationPublicId}/process": {
+      "patch": {
+        "summary": "예약 취소",
+        "deprecated": true,
+        "description": "예약 취소는 관리자 입금확인/취소 접수/취소 완료와 같이 사용",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationPublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/admin/main": {
+      "get": {
+        "summary": "관리자 메인 페이지 조회 (보류)",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules": {
+      "post": {
+        "summary": "출항 일정 생성하기",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleCreateRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/departure": {
+      "patch": {
+        "summary": "출항 시간 변경 api",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDepartureTimeRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/departure": {
+      "get": {
+        "summary": "관리자 : 메인페이지서 출항 시간 보기",
+        "deprecated": false,
+        "description": "만약 11월 11일 오후 7시 -> 11월 12일 출항 시간 띄어줌\n11월 11일 오전 3시 -> 11월 11일 출항 시간 띄어줌\n기준은 schedule의 시간",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseViewDepartureTimeResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "scheduleExist": false,
+                    "schedulePublicId": "",
+                    "date": "",
+                    "dayOfWeek": "",
+                    "dateTime": ""
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/departure/cancel": {
+      "post": {
+        "summary": "출항 취소",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartureRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseDepartureResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "messages": [
+                      {
+                        "timeStamp": "",
+                        "recipientPhone": "",
+                        "content": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/departure/delay": {
+      "post": {
+        "summary": "출항 연기",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartureRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseDepartureResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "messages": [
+                      {
+                        "timeStamp": "",
+                        "recipientPhone": "",
+                        "content": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/departure/confirmation": {
+      "post": {
+        "summary": "출항 확정 메시지 전송",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DepartureRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseDepartureResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "messages": [
+                      {
+                        "timeStamp": "",
+                        "recipientPhone": "",
+                        "content": ""
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/ships": {
+      "get": {
+        "summary": "배 리스트 조회 / 스케쥴 생성할 때 필요한 조회",
+        "deprecated": false,
+        "description": "쿼리 파라미터 page, size",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "example": 0,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "example": 2,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponsePageResponseShipDetailResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "content": [
+                      {
+                        "ship": {
+                          "shipId": 0,
+                          "fishType": "",
+                          "price": 0,
+                          "notification": ""
+                        }
+                      }
+                    ],
+                    "page": 0,
+                    "size": 0,
+                    "totalElements": 0,
+                    "totalPages": 0,
+                    "first": false,
+                    "last": false,
+                    "hasNext": false,
+                    "hasPrevious": false
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "post": {
+        "summary": "배 생성 api",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShipRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/ships/{shipId}": {
+      "get": {
+        "summary": "배 상세 조회",
+        "deprecated": true,
+        "description": "배 상세조회는 필요 없어서 배 리스트 조회와 합치겠습니다.",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "shipId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "description": "배의 id /식별자"
+                    },
+                    "fishType": {
+                      "type": "string",
+                      "description": "어종"
+                    },
+                    "price": {
+                      "type": "integer",
+                      "description": "승선 가격"
+                    },
+                    "maxHeadCount": {
+                      "type": "integer",
+                      "description": "승선 인원"
+                    },
+                    "notification": {
+                      "type": "string",
+                      "description": "공지사항"
+                    }
+                  },
+                  "required": [
+                    "notification"
+                  ]
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      },
+      "put": {
+        "summary": "배 수정 api",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "shipId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShipRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/ships/delete": {
+      "post": {
+        "summary": "배 삭제 api",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteShipRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{scheduleId}": {
+      "put": {
+        "summary": "출항 일정 수정",
+        "deprecated": true,
+        "description": "출항 일정 수정 <- 없애고 출항 일정 생성으로 퉁",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "scheduleId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "shipId": {
+                    "type": "integer",
+                    "description": "외래키1",
+                    "example": 0
+                  },
+                  "departure": {
+                    "description": "출항시간",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "currentHeadCount": {
+                    "type": "integer",
+                    "description": "현재인원",
+                    "example": 0
+                  },
+                  "tide": {
+                    "type": "integer",
+                    "description": "물떄",
+                    "example": 0
+                  },
+                  "status": {
+                    "description": "출항상태",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "pivot": {
+                    "type": "integer",
+                    "description": "기준좌석",
+                    "example": 0
+                  },
+                  "type": {
+                    "description": "예약종류",
+                    "example": "",
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/reservations/{reservationPublicId}/coupon": {
+      "post": {
+        "summary": "쿠폰 발급",
+        "deprecated": false,
+        "description": "쿠폰은 예약 하나하나에 대해서만 발급 가능 ",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationPublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/sms/search": {
+      "post": {
+        "summary": "SMS 내역 검색",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "검색 시작 기간",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "검색 종료 기간",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "result",
+            "in": "query",
+            "description": "전송 성공(SUCCESS)/실패 여부(FAILURE)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "description": "페이지",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/reservations/{reservationPublicId}": {
+      "get": {
+        "summary": "예약 상세 조회",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationPublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseReservationDetailResponse"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": {
+                    "ship": {
+                      "fishType": "",
+                      "notification": ""
+                    },
+                    "reservation": {
+                      "username": "",
+                      "nickname": "",
+                      "phone": "",
+                      "headCount": 0,
+                      "couponId": 0,
+                      "request": "",
+                      "totalPrice": 0,
+                      "process": ""
+                    },
+                    "schedule": {
+                      "departure": "",
+                      "dayOfWeek": "",
+                      "tide": 0
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/reservations": {
+      "get": {
+        "summary": "예약 검색 (완)",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "process",
+            "in": "query",
+            "description": "취소 내역만, 예약 내역만",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CANCEL",
+                "RESERVED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "reservation_id": {
+                        "type": "integer",
+                        "description": "예약 식별자"
+                      },
+                      "totalPrice": {
+                        "type": "integer",
+                        "description": "승선비"
+                      },
+                      "process": {
+                        "type": "string",
+                        "enum": [
+                          "RESERVE_COMPLETED",
+                          "DEPOSIT_COMPLETED",
+                          "CANCEL_REQUESTED",
+                          "CANCEL_COMPLETED"
+                        ],
+                        "description": "예약 상태"
+                      },
+                      "shipFishType": {
+                        "type": "string",
+                        "description": "어종"
+                      },
+                      "scheduleDeparture": {
+                        "type": "string",
+                        "description": "출항일시"
+                      }
+                    },
+                    "required": [
+                      "reservation_id",
+                      "process",
+                      "scheduleDeparture",
+                      "shipFishType",
+                      "totalPrice"
+                    ]
+                  },
+                  "minItems": 0,
+                  "maxItems": 10
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/reservations/{reservationPublicId}/process": {
+      "patch": {
+        "summary": "입금 확인/취소 접수/취소 완료 변경",
+        "deprecated": false,
+        "description": "예약자 - 취소 접수\n관리자 - 입금확인/취소 완료로 변경 가능",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationPublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReservationProcessUpdateRequest",
+                "description": ""
+              },
+              "examples": {}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/schedules/{schedulePublicId}/drawn": {
+      "patch": {
+        "summary": "선예약 마감",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "schedulePublicId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResponseEntityApiResponseVoid"
+                },
+                "example": {
+                  "success": false,
+                  "code": 0,
+                  "message": "",
+                  "data": null
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/{provider}/start": {
+      "get": {
+        "summary": "소셜 로그인 시작",
+        "deprecated": false,
+        "description": "인가 서버 - https://jjubul-auth.duckdns.org\ndevelop Environment 변경 필요",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/auth/logout": {
+      "get": {
+        "summary": "로그아웃",
+        "deprecated": false,
+        "description": "인가 서버 - https://jjubul-auth.duckdns.org\ndevelop Environment 변경 필요",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "in": "cookie",
+            "description": "사용중인 리프레시 토큰을 담아서 전송",
+            "required": false,
+            "example": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/user/oauth2": {
+      "get": {
+        "summary": "회원가입",
+        "deprecated": false,
+        "description": "인가 서버 - https://jjubul-auth.duckdns.org\ndevelop Environment 변경 필요",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "provider": {
+                    "description": "인가 제공자",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "sub": {
+                    "description": "인가 식별자",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "email": {
+                    "description": "이메일",
+                    "example": "",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "이름",
+                    "example": "",
+                    "type": "string"
+                  }
+                }
+              },
+              "examples": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReservationDetailShipDto": {
+        "type": "object",
+        "properties": {
+          "fishType": {
+            "type": "string",
+            "description": ""
+          },
+          "notification": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "fishType",
+          "notification"
+        ]
+      },
+      "ReservationDetailDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": ""
+          },
+          "phone": {
+            "type": "string",
+            "description": ""
+          },
+          "headCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "couponId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "request": {
+            "type": "string",
+            "description": ""
+          },
+          "totalPrice": {
+            "type": "integer",
+            "description": ""
+          },
+          "process": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "RESERVE_COMPLETED",
+              "DEPOSIT_COMPLETED",
+              "CANCEL_REQUESTED",
+              "CANCEL_COMPLETED"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "RESERVE_COMPLETED",
+                "name": "RESERVE_COMPLETED",
+                "description": "RESERVE_COMPLETED"
+              },
+              {
+                "value": "DEPOSIT_COMPLETED",
+                "name": "DEPOSIT_COMPLETED",
+                "description": "DEPOSIT_COMPLETED"
+              },
+              {
+                "value": "CANCEL_REQUESTED",
+                "name": "CANCEL_REQUESTED",
+                "description": "CANCEL_REQUESTED"
+              },
+              {
+                "value": "CANCEL_COMPLETED",
+                "name": "CANCEL_COMPLETED",
+                "description": "취소 완료"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "username",
+          "nickname",
+          "phone",
+          "headCount",
+          "couponId",
+          "request",
+          "totalPrice",
+          "process"
+        ]
+      },
+      "ReservationDetailScheduleDto": {
+        "type": "object",
+        "properties": {
+          "departure": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "MONDAY",
+                "name": "MONDAY",
+                "description": "The singleton instance for the day-of-week of Monday.\nThis has the numeric value of{@code 1}."
+              },
+              {
+                "value": "TUESDAY",
+                "name": "TUESDAY",
+                "description": "The singleton instance for the day-of-week of Tuesday.\nThis has the numeric value of{@code 2}."
+              },
+              {
+                "value": "WEDNESDAY",
+                "name": "WEDNESDAY",
+                "description": "The singleton instance for the day-of-week of Wednesday.\nThis has the numeric value of{@code 3}."
+              },
+              {
+                "value": "THURSDAY",
+                "name": "THURSDAY",
+                "description": "The singleton instance for the day-of-week of Thursday.\nThis has the numeric value of{@code 4}."
+              },
+              {
+                "value": "FRIDAY",
+                "name": "FRIDAY",
+                "description": "The singleton instance for the day-of-week of Friday.\nThis has the numeric value of{@code 5}."
+              },
+              {
+                "value": "SATURDAY",
+                "name": "SATURDAY",
+                "description": "The singleton instance for the day-of-week of Saturday.\nThis has the numeric value of{@code 6}."
+              },
+              {
+                "value": "SUNDAY",
+                "name": "SUNDAY",
+                "description": "The singleton instance for the day-of-week of Sunday.\nThis has the numeric value of{@code 7}."
+              }
+            ]
+          },
+          "tide": {
+            "type": "integer",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "departure",
+          "dayOfWeek",
+          "tide"
+        ]
+      },
+      "ReservationDetailResponse": {
+        "type": "object",
+        "properties": {
+          "ship": {
+            "$ref": "#/components/schemas/ReservationDetailShipDto",
+            "description": ""
+          },
+          "reservation": {
+            "$ref": "#/components/schemas/ReservationDetailDto",
+            "description": ""
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/ReservationDetailScheduleDto",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ship",
+          "reservation",
+          "schedule"
+        ]
+      },
+      "ResponseEntityApiResponseReservationDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReservationDetailResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ShipDetailDto": {
+        "type": "object",
+        "properties": {
+          "shipId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "fishType": {
+            "type": "string",
+            "description": ""
+          },
+          "price": {
+            "type": "integer",
+            "description": ""
+          },
+          "notification": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "shipId",
+          "fishType",
+          "price",
+          "notification"
+        ]
+      },
+      "ScheduleDetailDto": {
+        "type": "object",
+        "properties": {
+          "schedulePublicId": {
+            "type": "string",
+            "description": ""
+          },
+          "departure": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "tide": {
+            "type": "integer",
+            "description": ""
+          },
+          "remainCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "type": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "EARLY",
+              "DRAWN",
+              "NORMAL"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "EARLY",
+                "name": "EARLY",
+                "description": "EARLY"
+              },
+              {
+                "value": "DRAWN",
+                "name": "DRAWN",
+                "description": "DRAWN"
+              },
+              {
+                "value": "NORMAL",
+                "name": "NORMAL",
+                "description": "NORMAL"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "schedulePublicId",
+          "departure",
+          "tide",
+          "remainCount",
+          "type"
+        ]
+      },
+      "ReservationProcessUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "process": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "RESERVE_COMPLETED",
+              "DEPOSIT_COMPLETED",
+              "CANCEL_REQUESTED",
+              "CANCEL_COMPLETED"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "RESERVE_COMPLETED",
+                "name": "RESERVE_COMPLETED",
+                "description": "RESERVE_COMPLETED"
+              },
+              {
+                "value": "DEPOSIT_COMPLETED",
+                "name": "DEPOSIT_COMPLETED",
+                "description": "DEPOSIT_COMPLETED"
+              },
+              {
+                "value": "CANCEL_REQUESTED",
+                "name": "CANCEL_REQUESTED",
+                "description": "CANCEL_REQUESTED"
+              },
+              {
+                "value": "CANCEL_COMPLETED",
+                "name": "CANCEL_COMPLETED",
+                "description": "취소 완료"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "process"
+        ]
+      },
+      "ReservationCommonDto": {
+        "type": "object",
+        "properties": {
+          "reservationPublicId": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": "user field"
+          },
+          "grade": {
+            "type": "string",
+            "description": "user field",
+            "enum": [
+              "GUEST",
+              "BASIC",
+              "VIP",
+              "ADMIN"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "GUEST",
+                "name": "GUEST",
+                "description": "GUEST"
+              },
+              {
+                "value": "BASIC",
+                "name": "BASIC",
+                "description": "BASIC"
+              },
+              {
+                "value": "VIP",
+                "name": "VIP",
+                "description": "VIP"
+              },
+              {
+                "value": "ADMIN",
+                "name": "ADMIN",
+                "description": "ADMIN"
+              }
+            ]
+          },
+          "headCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "process": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "RESERVE_COMPLETED",
+              "DEPOSIT_COMPLETED",
+              "CANCEL_REQUESTED",
+              "CANCEL_COMPLETED"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "RESERVE_COMPLETED",
+                "name": "RESERVE_COMPLETED",
+                "description": "RESERVE_COMPLETED"
+              },
+              {
+                "value": "DEPOSIT_COMPLETED",
+                "name": "DEPOSIT_COMPLETED",
+                "description": "DEPOSIT_COMPLETED"
+              },
+              {
+                "value": "CANCEL_REQUESTED",
+                "name": "CANCEL_REQUESTED",
+                "description": "CANCEL_REQUESTED"
+              },
+              {
+                "value": "CANCEL_COMPLETED",
+                "name": "CANCEL_COMPLETED",
+                "description": "취소 완료"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "reservationPublicId",
+          "nickname",
+          "grade",
+          "headCount",
+          "process"
+        ]
+      },
+      "Writer": {
+        "type": "object",
+        "properties": {
+          "writeBuffer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Temporary buffer used to hold writes of strings and single characters"
+          },
+          "lock": {
+            "type": "object",
+            "properties": {},
+            "description": "The object used to synchronize operations on this stream.  For\nefficiency, a character-stream object may use an object other than\nitself to protect critical sections.  A subclass should therefore use\nthe object in this field rather than{@code this} or a synchronized\nmethod."
+          }
+        },
+        "x-apifox-orders": [
+          "writeBuffer",
+          "lock"
+        ]
+      },
+      "ScheduleDetailResponse": {
+        "type": "object",
+        "properties": {
+          "ship": {
+            "$ref": "#/components/schemas/ShipDetailDto",
+            "description": ""
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/ScheduleDetailDto",
+            "description": ""
+          },
+          "reservations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationCommonDto",
+              "description": "출항 일정 상세보기에 사용되는 dto"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ship",
+          "schedule",
+          "reservations"
+        ]
+      },
+      "BufferedWriter": {
+        "type": "object",
+        "properties": {
+          "writeBuffer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Temporary buffer used to hold writes of strings and single characters"
+          },
+          "lock": {
+            "type": "object",
+            "properties": {},
+            "description": "The object used to synchronize operations on this stream.  For\nefficiency, a character-stream object may use an object other than\nitself to protect critical sections.  A subclass should therefore use\nthe object in this field rather than{@code this} or a synchronized\nmethod."
+          },
+          "out": {
+            "$ref": "#/components/schemas/Writer",
+            "description": ""
+          },
+          "cb": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": ""
+          },
+          "nChars": {
+            "type": "integer",
+            "description": ""
+          },
+          "nextChar": {
+            "type": "integer",
+            "description": ""
+          },
+          "maxChars": {
+            "type": "integer",
+            "description": "maximum number of buffers chars"
+          }
+        },
+        "x-apifox-orders": [
+          "writeBuffer",
+          "lock",
+          "out",
+          "cb",
+          "nChars",
+          "nextChar",
+          "maxChars"
+        ]
+      },
+      "ResponseEntityApiResponseScheduleDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ScheduleDetailResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "Charset": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "tickles a bug in oldjavac"
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "tickles a bug in oldjavac"
+          },
+          "aliasSet": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "name",
+          "aliases",
+          "aliasSet"
+        ]
+      },
+      "MessageCommonDto": {
+        "type": "object",
+        "properties": {
+          "timeStamp": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "recipientPhone": {
+            "type": "string",
+            "description": ""
+          },
+          "content": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "timeStamp",
+          "recipientPhone",
+          "content"
+        ]
+      },
+      "ResponseEntityApiResponseVoid": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "description": "",
+            "type": "null"
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "Reader": {
+        "type": "object",
+        "properties": {
+          "lock": {
+            "type": "object",
+            "properties": {},
+            "description": "The object used to synchronize operations on this stream.  For\nefficiency, a character-stream object may use an object other than\nitself to protect critical sections.  A subclass should therefore use\nthe object in this field rather than{@code this} or a synchronized\nmethod."
+          },
+          "skipBuffer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Skip buffer, null until allocated"
+          }
+        },
+        "x-apifox-orders": [
+          "lock",
+          "skipBuffer"
+        ]
+      },
+      "DepartureResponse": {
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageCommonDto",
+              "description": "com.lamarfishing.core.log.message.dto.command.MessageCommonDto"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "messages"
+        ]
+      },
+      "ScheduleCreateRequest": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "description": "예약 시작 날짜",
+            "x-apifox-mock": "@date"
+          },
+          "endDate": {
+            "type": "string",
+            "description": "예약",
+            "x-apifox-mock": "@date"
+          },
+          "shipId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "scheduleType": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "EARLY",
+              "DRAWN",
+              "NORMAL"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "EARLY",
+                "name": "EARLY",
+                "description": "EARLY"
+              },
+              {
+                "value": "DRAWN",
+                "name": "DRAWN",
+                "description": "DRAWN"
+              },
+              {
+                "value": "NORMAL",
+                "name": "NORMAL",
+                "description": "NORMAL"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "startDate",
+          "endDate",
+          "shipId",
+          "scheduleType"
+        ]
+      },
+      "BufferedReader": {
+        "type": "object",
+        "properties": {
+          "lock": {
+            "type": "object",
+            "properties": {},
+            "description": "The object used to synchronize operations on this stream.  For\nefficiency, a character-stream object may use an object other than\nitself to protect critical sections.  A subclass should therefore use\nthe object in this field rather than{@code this} or a synchronized\nmethod."
+          },
+          "skipBuffer": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Skip buffer, null until allocated"
+          },
+          "in": {
+            "$ref": "#/components/schemas/Reader",
+            "description": ""
+          },
+          "cb": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": ""
+          },
+          "nChars": {
+            "type": "integer",
+            "description": ""
+          },
+          "nextChar": {
+            "type": "integer",
+            "description": ""
+          },
+          "markedChar": {
+            "type": "integer",
+            "description": "",
+            "default": -1
+          },
+          "readAheadLimit": {
+            "type": "integer",
+            "description": "",
+            "default": 0
+          },
+          "skipLF": {
+            "type": "boolean",
+            "description": "If the next character is a line feed, skip it",
+            "default": false
+          },
+          "markedSkipLF": {
+            "type": "boolean",
+            "description": "The skipLF flag when the mark was set",
+            "default": false
+          }
+        },
+        "x-apifox-orders": [
+          "lock",
+          "skipBuffer",
+          "in",
+          "cb",
+          "nChars",
+          "nextChar",
+          "markedChar",
+          "readAheadLimit",
+          "skipLF",
+          "markedSkipLF"
+        ]
+      },
+      "ResponseEntityApiResponseDepartureResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/DepartureResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ViewDepartureTimeResponse": {
+        "type": "object",
+        "properties": {
+          "scheduleExist": {
+            "type": "boolean",
+            "description": ""
+          },
+          "schedulePublicId": {
+            "type": "string",
+            "description": ""
+          },
+          "date": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@date"
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "description": ""
+          },
+          "dateTime": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@time"
+          }
+        },
+        "x-apifox-orders": [
+          "scheduleExist",
+          "schedulePublicId",
+          "date",
+          "dayOfWeek",
+          "dateTime"
+        ]
+      },
+      "Process": {
+        "type": "object",
+        "properties": {
+          "outputWriter": {
+            "$ref": "#/components/schemas/BufferedWriter",
+            "description": "Readers and Writers created for this process; so repeated calls return the same object"
+          },
+          "outputCharset": {
+            "$ref": "#/components/schemas/Charset",
+            "description": ""
+          },
+          "inputReader": {
+            "$ref": "#/components/schemas/BufferedReader",
+            "description": ""
+          },
+          "inputCharset": {
+            "$ref": "#/components/schemas/Charset",
+            "description": ""
+          },
+          "errorReader": {
+            "$ref": "#/components/schemas/BufferedReader",
+            "description": ""
+          },
+          "errorCharset": {
+            "$ref": "#/components/schemas/Charset",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "outputWriter",
+          "outputCharset",
+          "inputReader",
+          "inputCharset",
+          "errorReader",
+          "errorCharset"
+        ]
+      },
+      "DepartureRequest": {
+        "type": "object",
+        "properties": {
+          "scheduleStatus": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "WAITING",
+              "CONFIRMED",
+              "DELAYED",
+              "CANCELED"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "WAITING",
+                "name": "WAITING",
+                "description": "WAITING"
+              },
+              {
+                "value": "CONFIRMED",
+                "name": "CONFIRMED",
+                "description": "CONFIRMED"
+              },
+              {
+                "value": "DELAYED",
+                "name": "DELAYED",
+                "description": "DELAYED"
+              },
+              {
+                "value": "CANCELED",
+                "name": "CANCELED",
+                "description": "CANCELED"
+              }
+            ]
+          }
+        },
+        "x-apifox-orders": [
+          "scheduleStatus"
+        ]
+      },
+      "ResponseEntityApiResponseViewDepartureTimeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ViewDepartureTimeResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ReservationSimpleDto": {
+        "type": "object",
+        "properties": {
+          "reservationId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "totalPrice": {
+            "type": "integer",
+            "description": ""
+          },
+          "process": {
+            "$ref": "#/components/schemas/Process",
+            "description": ""
+          },
+          "shipFishType": {
+            "type": "string",
+            "description": ""
+          },
+          "scheduleDeparture": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          }
+        },
+        "x-apifox-orders": [
+          "reservationId",
+          "totalPrice",
+          "process",
+          "shipFishType",
+          "scheduleDeparture"
+        ]
+      },
+      "ReservationShipDto": {
+        "type": "object",
+        "properties": {
+          "fishType": {
+            "type": "string",
+            "description": ""
+          },
+          "price": {
+            "type": "integer",
+            "description": ""
+          },
+          "notification": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "fishType",
+          "price",
+          "notification"
+        ]
+      },
+      "UpdateDepartureTimeRequest": {
+        "type": "object",
+        "properties": {
+          "departureTime": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@time"
+          }
+        },
+        "x-apifox-orders": [
+          "departureTime"
+        ]
+      },
+      "PageResponseReservationSimpleDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationSimpleDto",
+              "description": "com.lamarfishing.core.reservation.dto.command.ReservationSimpleDto"
+            },
+            "description": ""
+          },
+          "page": {
+            "type": "integer",
+            "description": "현재 페이지 번호 (0-based)"
+          },
+          "size": {
+            "type": "integer",
+            "description": "페이지당 항목 수"
+          },
+          "totalElements": {
+            "type": "integer",
+            "description": "전체 항목 수",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "전체 페이지 수"
+          },
+          "first": {
+            "type": "boolean",
+            "description": "첫 페이지 여부"
+          },
+          "last": {
+            "type": "boolean",
+            "description": "마지막 페이지 여부"
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "다음 페이지 여부"
+          },
+          "hasPrevious": {
+            "type": "boolean",
+            "description": "이전 페이지 여부"
+          }
+        },
+        "x-apifox-orders": [
+          "content",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages",
+          "first",
+          "last",
+          "hasNext",
+          "hasPrevious"
+        ]
+      },
+      "CouponCommonDto": {
+        "type": "object",
+        "properties": {
+          "couponId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          },
+          "type": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "WEEKDAY",
+              "WEEKEND"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "WEEKDAY",
+                "name": "WEEKDAY",
+                "description": "WEEKDAY"
+              },
+              {
+                "value": "WEEKEND",
+                "name": "WEEKEND",
+                "description": "WEEKEND"
+              }
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          }
+        },
+        "x-apifox-orders": [
+          "couponId",
+          "type",
+          "expiresAt"
+        ]
+      },
+      "ResponseEntityApiResponsePageResponseReservationSimpleDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseReservationSimpleDto",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ReservationUserDto": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": ""
+          },
+          "grade": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "GUEST",
+              "BASIC",
+              "VIP",
+              "ADMIN"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "GUEST",
+                "name": "GUEST",
+                "description": "GUEST"
+              },
+              {
+                "value": "BASIC",
+                "name": "BASIC",
+                "description": "BASIC"
+              },
+              {
+                "value": "VIP",
+                "name": "VIP",
+                "description": "VIP"
+              },
+              {
+                "value": "ADMIN",
+                "name": "ADMIN",
+                "description": "ADMIN"
+              }
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "description": ""
+          },
+          "coupons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CouponCommonDto",
+              "description": "com.lamarfishing.core.coupon.dto.CouponCommonDto"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "username",
+          "nickname",
+          "grade",
+          "phone",
+          "coupons"
+        ]
+      },
+      "ReservationPopupResponse": {
+        "type": "object",
+        "properties": {
+          "ship": {
+            "$ref": "#/components/schemas/ReservationShipDto",
+            "description": ""
+          },
+          "user": {
+            "$ref": "#/components/schemas/ReservationUserDto",
+            "description": ""
+          },
+          "schedulePublicId": {
+            "type": "string",
+            "description": ""
+          },
+          "remainHeadCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "departure": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "MONDAY",
+                "name": "MONDAY",
+                "description": "The singleton instance for the day-of-week of Monday.\nThis has the numeric value of{@code 1}."
+              },
+              {
+                "value": "TUESDAY",
+                "name": "TUESDAY",
+                "description": "The singleton instance for the day-of-week of Tuesday.\nThis has the numeric value of{@code 2}."
+              },
+              {
+                "value": "WEDNESDAY",
+                "name": "WEDNESDAY",
+                "description": "The singleton instance for the day-of-week of Wednesday.\nThis has the numeric value of{@code 3}."
+              },
+              {
+                "value": "THURSDAY",
+                "name": "THURSDAY",
+                "description": "The singleton instance for the day-of-week of Thursday.\nThis has the numeric value of{@code 4}."
+              },
+              {
+                "value": "FRIDAY",
+                "name": "FRIDAY",
+                "description": "The singleton instance for the day-of-week of Friday.\nThis has the numeric value of{@code 5}."
+              },
+              {
+                "value": "SATURDAY",
+                "name": "SATURDAY",
+                "description": "The singleton instance for the day-of-week of Saturday.\nThis has the numeric value of{@code 6}."
+              },
+              {
+                "value": "SUNDAY",
+                "name": "SUNDAY",
+                "description": "The singleton instance for the day-of-week of Sunday.\nThis has the numeric value of{@code 7}."
+              }
+            ]
+          },
+          "tide": {
+            "type": "integer",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ship",
+          "user",
+          "schedulePublicId",
+          "remainHeadCount",
+          "departure",
+          "dayOfWeek",
+          "tide"
+        ]
+      },
+      "ResponseEntityApiResponseReservationPopupResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReservationPopupResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ReservationCreateResponse": {
+        "type": "object",
+        "properties": {
+          "reservationPublicId": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "reservationPublicId"
+        ]
+      },
+      "ResponseEntityApiResponseReservationCreateResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ReservationCreateResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ReservationPopupRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": ""
+          },
+          "phone": {
+            "type": "string",
+            "description": ""
+          },
+          "headCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "request": {
+            "type": "string",
+            "description": ""
+          },
+          "couponId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          }
+        },
+        "x-apifox-orders": [
+          "username",
+          "nickname",
+          "phone",
+          "headCount",
+          "request",
+          "couponId"
+        ]
+      },
+      "ProfileCouponDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "WEEKDAY",
+              "WEEKEND"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "WEEKDAY",
+                "name": "WEEKDAY",
+                "description": "WEEKDAY"
+              },
+              {
+                "value": "WEEKEND",
+                "name": "WEEKEND",
+                "description": "WEEKEND"
+              }
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          }
+        },
+        "x-apifox-orders": [
+          "type",
+          "expiresAt"
+        ]
+      },
+      "MyProfileResponse": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": ""
+          },
+          "grade": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "GUEST",
+              "BASIC",
+              "VIP",
+              "ADMIN"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "GUEST",
+                "name": "GUEST",
+                "description": "GUEST"
+              },
+              {
+                "value": "BASIC",
+                "name": "BASIC",
+                "description": "BASIC"
+              },
+              {
+                "value": "VIP",
+                "name": "VIP",
+                "description": "VIP"
+              },
+              {
+                "value": "ADMIN",
+                "name": "ADMIN",
+                "description": "ADMIN"
+              }
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "description": ""
+          },
+          "coupons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProfileCouponDto",
+              "description": "com.lamarfishing.core.coupon.dto.ProfileCouponDto"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "username",
+          "nickname",
+          "grade",
+          "phone",
+          "coupons"
+        ]
+      },
+      "ResponseEntityApiResponseMyProfileResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/MyProfileResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ScheduleMainDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "schedule",
+            "format": "int64"
+          },
+          "departure": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "remainingHeadCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "tide": {
+            "type": "integer",
+            "description": ""
+          },
+          "status": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "WAITING",
+              "CONFIRMED",
+              "DELAYED",
+              "CANCELED"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "WAITING",
+                "name": "WAITING",
+                "description": "WAITING"
+              },
+              {
+                "value": "CONFIRMED",
+                "name": "CONFIRMED",
+                "description": "CONFIRMED"
+              },
+              {
+                "value": "DELAYED",
+                "name": "DELAYED",
+                "description": "DELAYED"
+              },
+              {
+                "value": "CANCELED",
+                "name": "CANCELED",
+                "description": "CANCELED"
+              }
+            ]
+          },
+          "type": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "EARLY",
+              "DRAWN",
+              "NORMAL"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "EARLY",
+                "name": "EARLY",
+                "description": "EARLY"
+              },
+              {
+                "value": "DRAWN",
+                "name": "DRAWN",
+                "description": "DRAWN"
+              },
+              {
+                "value": "NORMAL",
+                "name": "NORMAL",
+                "description": "NORMAL"
+              }
+            ]
+          },
+          "fishType": {
+            "type": "string",
+            "description": "ship"
+          },
+          "price": {
+            "type": "integer",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "id",
+          "departure",
+          "remainingHeadCount",
+          "tide",
+          "status",
+          "type",
+          "fishType",
+          "price"
+        ]
+      },
+      "PageResponseScheduleMainDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ScheduleMainDto",
+              "description": "com.lamarfishing.core.schedule.dto.command.ScheduleMainDto"
+            },
+            "description": ""
+          },
+          "page": {
+            "type": "integer",
+            "description": "현재 페이지 번호 (0-based)"
+          },
+          "size": {
+            "type": "integer",
+            "description": "페이지당 항목 수"
+          },
+          "totalElements": {
+            "type": "integer",
+            "description": "전체 항목 수",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "전체 페이지 수"
+          },
+          "first": {
+            "type": "boolean",
+            "description": "첫 페이지 여부"
+          },
+          "last": {
+            "type": "boolean",
+            "description": "마지막 페이지 여부"
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "다음 페이지 여부"
+          },
+          "hasPrevious": {
+            "type": "boolean",
+            "description": "이전 페이지 여부"
+          }
+        },
+        "x-apifox-orders": [
+          "content",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages",
+          "first",
+          "last",
+          "hasNext",
+          "hasPrevious"
+        ]
+      },
+      "ShipListResponse": {
+        "type": "object",
+        "properties": {
+          "ships": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShipDetailDto",
+              "description": "출항 일정 상세 조회에 사용되는 dto"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ships"
+        ]
+      },
+      "ResponseEntityApiResponsePageResponseScheduleMainDto": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseScheduleMainDto",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ResponseEntityApiResponseShipListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/ShipListResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "ShipDetailResponse": {
+        "type": "object",
+        "properties": {
+          "ship": {
+            "$ref": "#/components/schemas/ShipDetailDto",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ship"
+        ]
+      },
+      "PageResponseShipDetailResponse": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShipDetailResponse",
+              "description": "com.lamarfishing.core.ship.dto.response.ShipDetailResponse"
+            },
+            "description": ""
+          },
+          "page": {
+            "type": "integer",
+            "description": "현재 페이지 번호 (0-based)"
+          },
+          "size": {
+            "type": "integer",
+            "description": "페이지당 항목 수"
+          },
+          "totalElements": {
+            "type": "integer",
+            "description": "전체 항목 수",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "전체 페이지 수"
+          },
+          "first": {
+            "type": "boolean",
+            "description": "첫 페이지 여부"
+          },
+          "last": {
+            "type": "boolean",
+            "description": "마지막 페이지 여부"
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "다음 페이지 여부"
+          },
+          "hasPrevious": {
+            "type": "boolean",
+            "description": "이전 페이지 여부"
+          }
+        },
+        "x-apifox-orders": [
+          "content",
+          "page",
+          "size",
+          "totalElements",
+          "totalPages",
+          "first",
+          "last",
+          "hasNext",
+          "hasPrevious"
+        ]
+      },
+      "CreateShipRequest": {
+        "type": "object",
+        "properties": {
+          "fishType": {
+            "type": "string",
+            "description": ""
+          },
+          "price": {
+            "type": "integer",
+            "description": ""
+          },
+          "maxHeadCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "notification": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "fishType",
+          "price",
+          "maxHeadCount",
+          "notification"
+        ]
+      },
+      "ResponseEntityApiResponsePageResponseShipDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/PageResponseShipDetailResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "UpdateShipRequest": {
+        "type": "object",
+        "properties": {
+          "fishType": {
+            "type": "string",
+            "description": ""
+          },
+          "price": {
+            "type": "integer",
+            "description": ""
+          },
+          "maxHeadCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "notification": {
+            "type": "string",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "fishType",
+          "price",
+          "maxHeadCount",
+          "notification"
+        ]
+      },
+      "DeleteShipRequest": {
+        "type": "object",
+        "properties": {
+          "shipIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "shipIds"
+        ]
+      },
+      "EarlyReservationPopupResponse": {
+        "type": "object",
+        "properties": {
+          "ship": {
+            "$ref": "#/components/schemas/ReservationShipDto",
+            "description": ""
+          },
+          "user": {
+            "$ref": "#/components/schemas/ReservationUserDto",
+            "description": ""
+          },
+          "schedulePublicId": {
+            "type": "string",
+            "description": ""
+          },
+          "remainHeadCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "departure": {
+            "type": "string",
+            "description": "",
+            "x-apifox-mock": "@datetime"
+          },
+          "dayOfWeek": {
+            "type": "string",
+            "description": "",
+            "enum": [
+              "MONDAY",
+              "TUESDAY",
+              "WEDNESDAY",
+              "THURSDAY",
+              "FRIDAY",
+              "SATURDAY",
+              "SUNDAY"
+            ],
+            "x-apifox-enum": [
+              {
+                "value": "MONDAY",
+                "name": "MONDAY",
+                "description": "The singleton instance for the day-of-week of Monday.\nThis has the numeric value of{@code 1}."
+              },
+              {
+                "value": "TUESDAY",
+                "name": "TUESDAY",
+                "description": "The singleton instance for the day-of-week of Tuesday.\nThis has the numeric value of{@code 2}."
+              },
+              {
+                "value": "WEDNESDAY",
+                "name": "WEDNESDAY",
+                "description": "The singleton instance for the day-of-week of Wednesday.\nThis has the numeric value of{@code 3}."
+              },
+              {
+                "value": "THURSDAY",
+                "name": "THURSDAY",
+                "description": "The singleton instance for the day-of-week of Thursday.\nThis has the numeric value of{@code 4}."
+              },
+              {
+                "value": "FRIDAY",
+                "name": "FRIDAY",
+                "description": "The singleton instance for the day-of-week of Friday.\nThis has the numeric value of{@code 5}."
+              },
+              {
+                "value": "SATURDAY",
+                "name": "SATURDAY",
+                "description": "The singleton instance for the day-of-week of Saturday.\nThis has the numeric value of{@code 6}."
+              },
+              {
+                "value": "SUNDAY",
+                "name": "SUNDAY",
+                "description": "The singleton instance for the day-of-week of Sunday.\nThis has the numeric value of{@code 7}."
+              }
+            ]
+          },
+          "tide": {
+            "type": "integer",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "ship",
+          "user",
+          "schedulePublicId",
+          "remainHeadCount",
+          "departure",
+          "dayOfWeek",
+          "tide"
+        ]
+      },
+      "ResponseEntityApiResponseEarlyReservationPopupResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": ""
+          },
+          "code": {
+            "type": "integer",
+            "description": ""
+          },
+          "message": {
+            "type": "string",
+            "description": ""
+          },
+          "data": {
+            "$ref": "#/components/schemas/EarlyReservationPopupResponse",
+            "description": ""
+          }
+        },
+        "x-apifox-orders": [
+          "success",
+          "code",
+          "message",
+          "data"
+        ]
+      },
+      "EarlyReservationPopupRequest": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": ""
+          },
+          "nickname": {
+            "type": "string",
+            "description": ""
+          },
+          "phone": {
+            "type": "string",
+            "description": ""
+          },
+          "headCount": {
+            "type": "integer",
+            "description": ""
+          },
+          "request": {
+            "type": "string",
+            "description": ""
+          },
+          "couponId": {
+            "type": "integer",
+            "description": "",
+            "format": "int64"
+          }
+        },
+        "x-apifox-orders": [
+          "username",
+          "nickname",
+          "phone",
+          "headCount",
+          "request",
+          "couponId"
+        ]
+      }
+    },
+    "securitySchemes": {}
+  },
+  "servers": [],
+  "security": []
+}
