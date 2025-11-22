@@ -9,7 +9,7 @@ function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 w-[256px] z-50 sidebar-responsive" style={{ height: '100vh', minHeight: '100vh', bottom: 0, overflowY: 'auto', backgroundColor: 'transparent' }}>
+    <aside className="fixed left-0 top-0 w-[256px] z-50 sidebar-responsive bg-[#F7F8FC]" style={{ height: '100vh', minHeight: '100vh', bottom: 0, overflowY: 'auto' }}>
       {/* 로고 영역 */}
       <div className="h-[77px] ml-[53px] mt-[56px] w-[149px]" style={{ marginLeft: 'calc(53px * var(--scale))', marginTop: 'calc(56px * var(--scale))', width: 'calc(149px * var(--scale))', height: 'calc(77px * var(--scale))' }}>
         <div
@@ -24,7 +24,7 @@ function Sidebar() {
       </div>
 
       {/* 사이드바 메뉴 */}
-      <div className="relative" style={{ height: 'calc(585px * var(--scale))', marginLeft: 'calc(25px * var(--scale))', marginTop: 'calc(109px * var(--scale))', width: 'calc(187px * var(--scale))' }}>
+      <div className="relative" style={{ minHeight: 'calc(585px * var(--scale))', marginLeft: 'calc(25px * var(--scale))', marginTop: 'calc(109px * var(--scale))', width: 'calc(187px * var(--scale))', paddingBottom: 'calc(50px * var(--scale))' }}>
         {/* 운영관리 섹션 */}
         <p className="font-semibold leading-[28px] text-[#272c3c] text-[26px]" style={{ fontSize: 'calc(26px * var(--scale))', lineHeight: 'calc(28px * var(--scale))', marginLeft: 'calc(41px * var(--scale))' }}>
           운영관리

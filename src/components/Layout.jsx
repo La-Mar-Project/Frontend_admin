@@ -14,10 +14,11 @@ function Layout({ children }) {
           <main 
             className="bg-[#FFFFFF] overflow-y-auto"
             style={{ 
-              marginLeft: 'calc(256px * var(--scale))',
-              marginTop: 'calc(58px * var(--scale))',
-              marginBottom: 'calc(161px * var(--scale))',
-              height: 'calc(100vh / var(--scale) - 58px - 161px)'
+              marginLeft: '256px',
+              marginTop: '58px',
+              marginBottom: '161px',
+              height: 'calc(100vh - 58px - 161px)',
+              minHeight: 'calc(100vh - 58px - 161px)'
             }}
           >
             {children}

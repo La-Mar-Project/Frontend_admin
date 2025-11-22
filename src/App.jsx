@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
 import Home from './pages/Home';
 import SMSManagement from './pages/SMSManagement';
 import CompanyInfo from './pages/CompanyInfo';
@@ -10,23 +11,36 @@ import ReservationCalendar from './pages/ReservationCalendar';
 import ReservationManagement from './pages/ReservationManagement';
 import PreReservationCoupon from './pages/PreReservationCoupon';
 import SMSHistory from './pages/SMSHistory';
+import ProtectedRoute from './components/ProtectedRoute';
+import { isAuthenticated } from './utils/auth';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Navigate to="/home" replace />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/sms" element={<SMSManagement />} />
-        <Route path="/company-info" element={<CompanyInfo />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/assistant-manager" element={<AssistantManager />} />
-        <Route path="/admin-log" element={<AdminLog />} />
-        <Route path="/ship-info" element={<ShipInfo />} />
-        <Route path="/reservation-calendar" element={<ReservationCalendar />} />
-        <Route path="/reservation-management" element={<ReservationManagement />} />
-        <Route path="/pre-reservation-coupon" element={<PreReservationCoupon />} />
-        <Route path="/sms-history" element={<SMSHistory />} />
+        {/* 로그인 페이지 */}
+        <Route path="/login" element={<Login />} />
+        
+        {/* 루트 경로: 로그인 여부에 따라 리다이렉트 */}
+        <Route 
+          path="/" 
+          element={
+            isAuthenticated() ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />
+          } 
+        />
+        
+        {/* 보호된 라우트들 */}
+        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+        <Route path="/sms" element={<ProtectedRoute><SMSManagement /></ProtectedRoute>} />
+        <Route path="/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/assistant-manager" element={<ProtectedRoute><AssistantManager /></ProtectedRoute>} />
+        <Route path="/admin-log" element={<ProtectedRoute><AdminLog /></ProtectedRoute>} />
+        <Route path="/ship-info" element={<ProtectedRoute><ShipInfo /></ProtectedRoute>} />
+        <Route path="/reservation-calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
+        <Route path="/reservation-management" element={<ProtectedRoute><ReservationManagement /></ProtectedRoute>} />
+        <Route path="/pre-reservation-coupon" element={<ProtectedRoute><PreReservationCoupon /></ProtectedRoute>} />
+        <Route path="/sms-history" element={<ProtectedRoute><SMSHistory /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

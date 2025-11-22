@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
+import { apiPost } from '../utils/api';
 
 function SMSHistory() {
   const [selectedRows, setSelectedRows] = useState([]);
@@ -7,24 +8,76 @@ function SMSHistory() {
   const [endDate, setEndDate] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedShip, setSelectedShip] = useState('');
+  const [smsHistoryData, setSmsHistoryData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
-  const smsHistoryData = [
-    { id: 15, smsType: '사용중', name: 'code1', contact: '원종윤', phone: '010-1234-5678', sendTime: '2025-01-01 10:00', status: '발송완료' },
-    { id: 14, smsType: '사용중', name: 'code2', contact: '손고장난벽시', phone: '010-1234-5678', sendTime: '2025-01-01 09:30', status: '발송완료' },
-    { id: 13, smsType: '사용중', name: 'code1', contact: '김지오', phone: '010-1234-5678', sendTime: '2025-01-01 09:00', status: '발송완료' },
-    { id: 12, smsType: '사용중', name: 'code1', contact: '김준수', phone: '010-1234-5678', sendTime: '2025-01-01 08:30', status: '발송완료' },
-    { id: 11, smsType: '사용중', name: 'code1', contact: '장창엽', phone: '010-1234-5678', sendTime: '2025-01-01 08:00', status: '발송완료' },
-    { id: 10, smsType: '사용중', name: 'code1', contact: '노수현', phone: '010-1234-5678', sendTime: '2025-01-01 07:30', status: '발송완료' },
-    { id: 9, smsType: '사용중', name: 'code1', contact: '김빅토리아노', phone: '010-1234-5678', sendTime: '2025-01-01 07:00', status: '발송완료' },
-    { id: 8, smsType: '사용중', name: 'rhksflwkdlqjs', contact: '관리자2', phone: '010-1234-5678', sendTime: '2025-01-01 06:30', status: '발송완료' },
-    { id: 7, smsType: '보관중', name: 'rhksflwkdlfqjs', contact: '관리자1', phone: '010-1234-5678', sendTime: '2025-01-01 06:00', status: '발송완료' },
-    { id: 6, smsType: '사용중', name: 'code1', contact: '선장', phone: '010-1234-5678', sendTime: '2025-01-01 05:30', status: '발송완료' },
-    { id: 5, smsType: '사용중', name: 'JJUBULL', contact: '쭈불', phone: '010-1234-5678', sendTime: '2025-01-01 05:00', status: '발송완료' },
-    { id: 4, smsType: '사용중', name: 'alololo', contact: '알로스', phone: '010-1234-5678', sendTime: '2025-01-01 04:30', status: '발송완료' },
-    { id: 3, smsType: '사용중', name: 'num3', contact: '삼번', phone: '010-1234-5678', sendTime: '2025-01-01 04:00', status: '발송완료' },
-    { id: 2, smsType: '사용중', name: 'code1', contact: '쭈꾸미', phone: '010-1234-5678', sendTime: '2025-01-01 03:30', status: '발송완료' },
-    { id: 1, smsType: '보관중', name: 'code1', contact: '사용', phone: '010-1234-5678', sendTime: '2025-01-01 03:00', status: '발송완료' },
-  ];
+  // SMS 내역 조회 함수
+  const fetchSMSHistory = useCallback(async (page = 0) => {
+    setLoading(true);
+    try {
+      let queryParams = [];
+      
+      if (startDate) {
+        queryParams.push(`from=${encodeURIComponent(startDate)}`);
+      }
+      if (endDate) {
+        queryParams.push(`to=${encodeURIComponent(endDate)}`);
+      }
+      if (selectedType === 'SUCCESS' || selectedType === 'FAILURE') {
+        queryParams.push(`result=${encodeURIComponent(selectedType)}`);
+      }
+      if (page !== undefined && page !== null) {
+        queryParams.push(`pageable=${page}`);
+      }
+      
+      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+      // POST 요청 (빈 body 또는 필요한 데이터 전송)
+      const response = await apiPost(`/sms/search${queryString}`, {});
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[SMSHistory] SMS 내역 조회 결과:', result);
+        
+        if (result.success && result.data) {
+          // API 응답 데이터 변환
+          const smsData = Array.isArray(result.data) ? result.data : 
+                         (result.data.content ? result.data.content : []);
+          
+          const formattedData = smsData.map((sms, index) => ({
+            id: sms.id || sms.smsId || (page * 10 + index + 1),
+            smsType: sms.smsType || sms.type || '사용중',
+            name: sms.name || sms.templateName || '',
+            contact: sms.contact || sms.recipientName || sms.name || '',
+            phone: sms.phone || sms.phoneNumber || sms.recipientPhone || '',
+            sendTime: sms.sendTime || sms.sentAt || sms.createdAt || '',
+            status: sms.status || (sms.result === 'SUCCESS' ? '발송완료' : sms.result === 'FAILURE' ? '발송실패' : '발송완료')
+          }));
+          
+          setSmsHistoryData(formattedData);
+        } else {
+          setSmsHistoryData([]);
+        }
+      } else {
+        console.error('[SMSHistory] SMS 내역 조회 실패:', response.status, response.statusText);
+        // 404나 405 같은 에러의 경우 빈 배열로 설정 (백엔드 API 미구현 가능성)
+        setSmsHistoryData([]);
+        if (response.status === 404) {
+          console.warn('[SMSHistory] 백엔드 API가 아직 구현되지 않았을 수 있습니다: /sms/search');
+        }
+      }
+    } catch (error) {
+      console.error('[SMSHistory] SMS 내역 조회 오류:', error);
+      setSmsHistoryData([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate, selectedType]);
+
+  // 초기 로드
+  useEffect(() => {
+    fetchSMSHistory(0);
+  }, [fetchSMSHistory]);
 
   const toggleRow = (id) => {
     setSelectedRows(prev => 
@@ -39,6 +92,8 @@ function SMSHistory() {
     }
     if (window.confirm(`${selectedRows.length}개 항목을 삭제하시겠습니까?`)) {
       setSelectedRows([]);
+      // 삭제 후 목록 다시 불러오기
+      fetchSMSHistory(currentPage);
     }
   };
 
@@ -47,9 +102,16 @@ function SMSHistory() {
     setEndDate('');
     setSelectedType('');
     setSelectedShip('');
+    setCurrentPage(0);
+    // 필터 초기화 후 목록 다시 불러오기
+    setTimeout(() => {
+      fetchSMSHistory(0);
+    }, 0);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // 저장 버튼 클릭 시 검색
+    await fetchSMSHistory(currentPage);
     alert('필터가 저장되었습니다.');
   };
 
@@ -202,56 +264,70 @@ function SMSHistory() {
                     </div>
                   </div>
 
-                  {smsHistoryData.map((row) => (
-                    <div key={row.id} className="flex items-center">
-                      <div className="flex w-[66px] h-[48px] px-[20px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
-                        <div className="flex p-[10px] items-center gap-[10px]">
-                          <svg 
-                            width="24" 
-                            height="24" 
-                            viewBox="0 0 44 44" 
-                            fill="none" 
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="cursor-pointer"
-                            onClick={() => toggleRow(row.id)}
-                          >
-                            <path 
-                              d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
-                              fill={selectedRows.includes(row.id) ? "#1840B8" : "white"}
-                              stroke="#1840B8"
-                            />
-                            {selectedRows.includes(row.id) && (
+                  {loading ? (
+                    <div className="flex w-full py-[40px] justify-center items-center">
+                      <span className="text-[18px] font-normal text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                        조회 중...
+                      </span>
+                    </div>
+                  ) : smsHistoryData.length === 0 ? (
+                    <div className="flex w-full py-[40px] justify-center items-center">
+                      <span className="text-[18px] font-normal text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                        SMS 발송 내역이 없습니다.
+                      </span>
+                    </div>
+                  ) : (
+                    smsHistoryData.map((row, index) => (
+                      <div key={row.id || index} className="flex items-center">
+                        <div className="flex w-[66px] h-[48px] px-[20px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
+                          <div className="flex p-[10px] items-center gap-[10px]">
+                            <svg 
+                              width="24" 
+                              height="24" 
+                              viewBox="0 0 44 44" 
+                              fill="none" 
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="cursor-pointer"
+                              onClick={() => toggleRow(row.id)}
+                            >
                               <path 
-                                d="M18 22L21 25L26 19" 
-                                stroke="white" 
-                                strokeWidth="2" 
-                                strokeLinecap="round" 
-                                strokeLinejoin="round"
+                                d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
+                                fill={selectedRows.includes(row.id) ? "#1840B8" : "white"}
+                                stroke="#1840B8"
                               />
-                            )}
-                          </svg>
+                              {selectedRows.includes(row.id) && (
+                                <path 
+                                  d="M18 22L21 25L26 19" 
+                                  stroke="white" 
+                                  strokeWidth="2" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                />
+                              )}
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="flex w-[66px] h-[48px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{index + 1}</span>
+                        </div>
+                        <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.smsType || 'N/A'}</span>
+                        </div>
+                        <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.contact || 'N/A'}</span>
+                        </div>
+                        <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.phone || 'N/A'}</span>
+                        </div>
+                        <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.sendTime || 'N/A'}</span>
+                        </div>
+                        <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.status || 'N/A'}</span>
                         </div>
                       </div>
-                      <div className="flex w-[66px] h-[48px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.id}</span>
-                      </div>
-                      <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.smsType}</span>
-                      </div>
-                      <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.contact}</span>
-                      </div>
-                      <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.phone}</span>
-                      </div>
-                      <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.sendTime}</span>
-                      </div>
-                      <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                        <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.status}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 

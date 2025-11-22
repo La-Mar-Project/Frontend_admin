@@ -1,167 +1,273 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import { apiGet, apiPost } from '../utils/api';
 
 function ReservationManagement() {
   const [selectedRows, setSelectedRows] = useState(new Set());
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // 날짜 선택 관련
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
+  
+  // 타입 및 배 선택
+  const [selectedType, setSelectedType] = useState('');
+  const [selectedBoat, setSelectedBoat] = useState('');
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+  const [boats, setBoats] = useState([]);
 
-  const mockData = [
-    {
-      id: 1,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: true
-    },
-    {
-      id: 2,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '출항일 뵙겠습니다 잘 부탁드립니다',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 3,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 4,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: true
-    },
-    {
-      id: 5,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 ',
-      status: '입금완료',
-      statusColor: '#272C3C',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 6,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: true
-    },
-    {
-      id: 7,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '',
-      status: '예약접수',
-      statusColor: '#2754DA',
-      payment: '신한11054653...',
-      coupon: true
-    },
-    {
-      id: 8,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '입금완료',
-      statusColor: '#272C3C',
-      payment: '신한11054653...',
-      coupon: true
-    },
-    {
-      id: 9,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '입금완료',
-      statusColor: '#272C3C',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 10,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '취소접수',
-      statusColor: '#ED2626',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 11,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '취소완료',
-      statusColor: '#272C3C',
-      payment: '신한11054653...',
-      coupon: false
-    },
-    {
-      id: 12,
-      date: '25.00.00',
-      name: '원종윤(1)',
-      phone: '010-1234-5678',
-      boat: '쭈갑이야',
-      amount: '270,000',
-      memo: '예약자 메모입니다 예약자 메모는 이런식으로 가로 180 픽셀랄라...',
-      status: '입금완료',
-      statusColor: '#272C3C',
-      payment: '신한11054653...',
-      coupon: false
+  const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+
+  // 배 리스트 불러오기
+  useEffect(() => {
+    const fetchBoats = async () => {
+      try {
+        const response = await apiGet('/ships?page=0&size=100');
+        if (response.ok) {
+          const result = await response.json();
+          console.log('[ReservationManagement] 배 목록 API 응답:', result);
+          
+          if (result.success && result.data && result.data.content) {
+            const boatsData = result.data.content.map((item) => ({
+              id: item.ship?.shipId || item.shipId,
+              shipId: item.ship?.shipId || item.shipId,
+              fishType: item.ship?.fishType || item.fishType || '',
+              price: item.ship?.price || item.price || 0,
+              maxHeadCount: item.ship?.maxHeadCount || item.maxHeadCount || 0,
+              notification: item.ship?.notification || item.notification || ''
+            }));
+            
+            setBoats(boatsData);
+          }
+        }
+      } catch (error) {
+        console.error('[ReservationManagement] 배 리스트 불러오기 실패:', error);
+      }
+    };
+    fetchBoats();
+  }, []);
+
+  // 예약 목록 불러오기
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  // 예약 목록 조회 함수
+  const fetchReservations = async () => {
+    setLoading(true);
+    try {
+      const response = await apiGet('/reservations');
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ReservationManagement] 예약 목록 API 응답:', result);
+        
+        if (result.success && result.data) {
+          const reservationsData = Array.isArray(result.data) ? result.data : 
+                                 (result.data.content ? result.data.content : []);
+          
+          const formattedReservations = reservationsData.map((reservation) => ({
+            id: reservation.reservationPublicId || reservation.reservation_public_id || reservation.id,
+            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
+            date: formatDate(reservation.departureDate || reservation.date || reservation.scheduleDate),
+            name: reservation.name || reservation.username || '예약자',
+            phone: reservation.phone || reservation.phoneNumber || '',
+            headCount: reservation.headCount || reservation.head_count || 0,
+            boat: reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
+            amount: reservation.price ? reservation.price.toLocaleString() : '0',
+            memo: reservation.memo || reservation.notification || '',
+            status: getStatusText(reservation.process),
+            statusColor: getStatusColor(reservation.process),
+            payment: reservation.paymentInfo || reservation.payment || '입금정보 없음',
+            coupon: reservation.hasCoupon || reservation.coupon || false,
+            process: reservation.process
+          }));
+          
+          setReservations(formattedReservations);
+        }
+      } else {
+        console.error('[ReservationManagement] 예약 목록 조회 실패:', response.status);
+      }
+    } catch (error) {
+      console.error('[ReservationManagement] 예약 목록 조회 오류:', error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // 날짜 포맷팅
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = String(date.getFullYear()).slice(-2);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  };
+
+  // 상태 텍스트 변환
+  const getStatusText = (process) => {
+    const statusMap = {
+      'RESERVE_COMPLETED': '예약접수',
+      'DEPOSIT_COMPLETED': '입금완료',
+      'CANCEL_REQUESTED': '취소접수',
+      'CANCEL_COMPLETED': '취소완료'
+    };
+    return statusMap[process] || process || '예약접수';
+  };
+
+  // 상태 색상 변환
+  const getStatusColor = (process) => {
+    const colorMap = {
+      'RESERVE_COMPLETED': '#2754DA',
+      'DEPOSIT_COMPLETED': '#272C3C',
+      'CANCEL_REQUESTED': '#ED2626',
+      'CANCEL_COMPLETED': '#272C3C'
+    };
+    return colorMap[process] || '#2754DA';
+  };
+
+  // 캘린더 생성 함수 (ReservationCalendar와 동일)
+  const generateCalendarDays = (year, month) => {
+    const firstDay = new Date(year, month - 1, 1);
+    const lastDay = new Date(year, month, 0);
+    const prevLastDay = new Date(year, month - 1, 0);
+    
+    const firstDayOfWeek = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
+    const daysInPrevMonth = prevLastDay.getDate();
+    
+    const days = [];
+    
+    // 이전 달 날짜
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: daysInPrevMonth - i,
+        month: month - 1,
+        year: year,
+        isPrevMonth: true
+      });
+    }
+    
+    // 현재 달 날짜
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: i,
+        month: month,
+        year: year,
+        isCurrentMonth: true
+      });
+    }
+    
+    // 다음 달 날짜
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: i,
+        month: month + 1,
+        year: year,
+        isNextMonth: true
+      });
+    }
+    
+    return days;
+  };
+
+  // 날짜 선택 핸들러
+  const handleDateSelect = (day) => {
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    
+    if (showStartCalendar) {
+      setStartDate(dateStr);
+      setShowStartCalendar(false);
+    } else if (showEndCalendar) {
+      setEndDate(dateStr);
+      setShowEndCalendar(false);
+    }
+  };
+
+  // 검색하기 버튼 클릭
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      let queryParams = [];
+      
+      if (startDate) {
+        queryParams.push(`startDate=${startDate}`);
+      }
+      if (endDate) {
+        queryParams.push(`endDate=${endDate}`);
+      }
+      if (selectedBoat) {
+        queryParams.push(`shipId=${selectedBoat}`);
+      }
+      if (selectedType) {
+        queryParams.push(`type=${selectedType}`);
+      }
+      
+      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+      const response = await apiGet(`/reservations${queryString}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ReservationManagement] 검색 결과:', result);
+        
+        if (result.success && result.data) {
+          const reservationsData = Array.isArray(result.data) ? result.data : 
+                                 (result.data.content ? result.data.content : []);
+          
+          const formattedReservations = reservationsData.map((reservation) => ({
+            id: reservation.reservationPublicId || reservation.reservation_public_id || reservation.id,
+            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
+            date: formatDate(reservation.departureDate || reservation.date || reservation.scheduleDate),
+            name: reservation.name || reservation.username || '예약자',
+            phone: reservation.phone || reservation.phoneNumber || '',
+            headCount: reservation.headCount || reservation.head_count || 0,
+            boat: reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
+            amount: reservation.price ? reservation.price.toLocaleString() : '0',
+            memo: reservation.memo || reservation.notification || '',
+            status: getStatusText(reservation.process),
+            statusColor: getStatusColor(reservation.process),
+            payment: reservation.paymentInfo || reservation.payment || '입금정보 없음',
+            coupon: reservation.hasCoupon || reservation.coupon || false,
+            process: reservation.process
+          }));
+          
+          setReservations(formattedReservations);
+        }
+      } else {
+        console.error('[ReservationManagement] 검색 실패:', response.status);
+        alert('검색에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('[ReservationManagement] 검색 오류:', error);
+      alert('검색 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 쿠폰 버튼 클릭 핸들러
+  const handleCouponClick = async (reservationPublicId, currentCouponState) => {
+    try {
+      const response = await apiPost(`/reservations/${reservationPublicId}/coupon`, {});
+      
+      if (response.ok) {
+        // 성공 시 목록 다시 불러오기
+        await fetchReservations();
+      } else {
+        const errorData = await response.json();
+        alert(`쿠폰 설정 실패: ${errorData.message || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('[ReservationManagement] 쿠폰 설정 오류:', error);
+      alert('쿠폰 설정 중 오류가 발생했습니다.');
+    }
+  };
 
   const handleRowSelect = (id) => {
     const newSelected = new Set(selectedRows);
@@ -186,20 +292,28 @@ function ReservationManagement() {
             </p>
 
             <div className="flex flex-col items-start gap-[13px] self-stretch pt-[10px]">
-              <div className="flex items-center justify-between w-[800px]">
-                <div className="flex items-start gap-[10px]">
+              {/* 날짜 선택 및 타입 선택 */}
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-start gap-[10px] flex-1">
                   <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
                     <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
                       날짜
                     </span>
                   </div>
-                  <div className="flex items-center gap-[12px]">
-                    <div className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px]">
+                  <div className="flex items-center gap-[12px] relative flex-1">
+                    <div 
+                      className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
+                      onClick={() => {
+                        setShowStartCalendar(!showStartCalendar);
+                        setShowEndCalendar(false);
+                        setShowTypeDropdown(false);
+                      }}
+                    >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
                       </svg>
-                      <span className="text-[16px] font-normal text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>
-                        시작날짜
+                      <span className={`text-[16px] font-normal ${startDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
+                        {startDate || '시작날짜'}
                       </span>
                     </div>
                     <div className="flex items-center justify-center px-[10px] py-[9px] w-[28px]">
@@ -207,36 +321,174 @@ function ReservationManagement() {
                         -
                       </span>
                     </div>
-                    <div className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px]">
+                    <div 
+                      className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
+                      onClick={() => {
+                        setShowEndCalendar(!showEndCalendar);
+                        setShowStartCalendar(false);
+                        setShowTypeDropdown(false);
+                      }}
+                    >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
                       </svg>
-                      <span className="text-[16px] font-normal text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>
-                        끝날짜
+                      <span className={`text-[16px] font-normal ${endDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
+                        {endDate || '끝날짜'}
                       </span>
+                    </div>
+                    
+                    {/* 시작날짜 캘린더 팝업 */}
+                    {showStartCalendar && (
+                      <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => {
+                            if (month === 1) {
+                              setMonth(12);
+                              setYear(year - 1);
+                            } else {
+                              setMonth(month - 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
+                          <button onClick={() => {
+                            if (month === 12) {
+                              setMonth(1);
+                              setYear(year + 1);
+                            } else {
+                              setMonth(month + 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${day.isCurrentMonth && startDate && startDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowStartCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* 끝날짜 캘린더 팝업 */}
+                    {showEndCalendar && (
+                      <div className="absolute top-[45px] left-[210px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => {
+                            if (month === 1) {
+                              setMonth(12);
+                              setYear(year - 1);
+                            } else {
+                              setMonth(month - 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
+                          <button onClick={() => {
+                            if (month === 12) {
+                              setMonth(1);
+                              setYear(year + 1);
+                            } else {
+                              setMonth(month + 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${day.isCurrentMonth && endDate && endDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowEndCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* 타입 선택 (날짜 오른쪽) */}
+                  <div className="flex items-start gap-[10px] relative">
+                    <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
+                      <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
+                        타입
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-[5px] h-[37px] relative">
+                      <div 
+                        className="flex items-center justify-between px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px] cursor-pointer"
+                        onClick={() => {
+                          setShowTypeDropdown(!showTypeDropdown);
+                          setShowStartCalendar(false);
+                          setShowEndCalendar(false);
+                        }}
+                      >
+                        <span className={`text-[16px] font-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
+                          {selectedType || '타입 선택'}
+                        </span>
+                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                      </div>
+                      {showTypeDropdown && (
+                        <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
+                            onClick={() => {
+                              setSelectedType('일반예약');
+                              setShowTypeDropdown(false);
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[16px]">일반예약</p>
+                          </div>
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
+                            onClick={() => {
+                              setSelectedType('선예약');
+                              setShowTypeDropdown(false);
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[16px]">선예약</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-[10px] h-[37px]">
-                <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
-                  <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
-                    타입
-                  </span>
-                </div>
-                <div className="flex items-center gap-[5px] h-[37px]">
-                  <div className="flex items-center justify-between px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px]">
-                    <span className="text-[16px] font-normal text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>
-                      타입 선택
-                    </span>
-                    <svg width="20" height="27" viewBox="0 0 20 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5 11L10 17L15 11" stroke="#BDBDBD" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
+              {/* 배 선택 및 버튼 */}
               <div className="flex items-center justify-between self-stretch">
                 <div className="flex items-start gap-[10px]">
                   <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
@@ -245,18 +497,31 @@ function ReservationManagement() {
                     </span>
                   </div>
                   <div className="flex items-center justify-between px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px]">
-                    <span className="text-[16px] font-normal text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>
-                      배 선택
-                    </span>
+                    <select 
+                      className="text-[#272C3C] font-pretendard text-[16px] font-normal leading-normal border-none outline-none bg-transparent flex-1 cursor-pointer"
+                      value={selectedBoat}
+                      onChange={(e) => setSelectedBoat(e.target.value)}
+                    >
+                      <option key="default" value="">배 선택</option>
+                      {boats.map((boat, index) => (
+                        <option key={boat.id || `boat-${index}`} value={boat.id}>
+                          {boat.fishType} - {boat.price ? boat.price.toLocaleString() : '0'}원 (최대 {boat.maxHeadCount}명)
+                        </option>
+                      ))}
+                    </select>
                     <svg width="20" height="27" viewBox="0 0 20 27" fill="none" xmlns="http://www.w3.org/2000/svg">
                       <path d="M5 11L10 17L15 11" stroke="#BDBDBD" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
                 </div>
                 <div className="flex items-center gap-[10px] px-[10px]">
-                  <button className="flex items-center justify-center gap-[10px] px-[20px] py-[9px] rounded-[20px] border border-[#BDBDBD] bg-white">
+                  <button 
+                    className="flex items-center justify-center gap-[10px] px-[20px] py-[9px] rounded-[20px] border border-[#BDBDBD] bg-white"
+                    onClick={handleSearch}
+                    disabled={loading}
+                  >
                     <span className="text-[16px] font-medium text-[#1840B8]" style={{ fontFamily: 'Pretendard' }}>
-                      검색하기
+                      {loading ? '조회중...' : '검색하기'}
                     </span>
                   </button>
                   <button className="flex items-center justify-center gap-[10px] px-[20px] py-[9px] rounded-[20px] border border-[#BDBDBD] bg-white">
@@ -285,6 +550,7 @@ function ReservationManagement() {
 
             <div className="flex flex-col items-start justify-center gap-[40px] self-stretch pl-[60px]">
               <div className="flex flex-col items-start w-[986px]">
+                {/* 테이블 헤더 */}
                 <div className="flex items-center self-stretch">
                   <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[66px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
                     <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>
@@ -333,75 +599,102 @@ function ReservationManagement() {
                   </div>
                 </div>
 
-                {mockData.map((row) => (
-                  <div key={row.id} className="flex items-center self-stretch">
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] w-[66px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <div className="flex items-center gap-[10px] p-[10px]">
+                {/* 테이블 데이터 */}
+                {loading && reservations.length === 0 ? (
+                  <div className="flex items-center justify-center w-full py-[40px]">
+                    <span className="text-[16px] text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                      조회 중...
+                    </span>
+                  </div>
+                ) : reservations.length === 0 ? (
+                  <div className="flex items-center justify-center w-full py-[40px]">
+                    <span className="text-[16px] text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                      예약 정보가 없습니다.
+                    </span>
+                  </div>
+                ) : (
+                  reservations.map((row) => (
+                    <div key={row.id} className="flex items-center self-stretch">
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] w-[66px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <div className="flex items-center gap-[10px] p-[10px]">
+                          <svg 
+                            width="44" 
+                            height="44" 
+                            viewBox="0 0 44 44" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="cursor-pointer"
+                            onClick={() => handleRowSelect(row.id)}
+                          >
+                            <path 
+                              d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
+                              fill={selectedRows.has(row.id) ? '#1840B8' : 'white'}
+                              stroke="#1840B8"
+                            />
+                            {selectedRows.has(row.id) && (
+                              <path d="M19 22L22 25L27 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            )}
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {row.date}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {`${row.name}(${row.headCount}) ${row.phone}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {row.boat}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {row.amount}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {row.memo}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
+                          {row.status}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                          {row.payment}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[48px] border-2 border-[#DFE7F4] bg-white">
                         <svg 
-                          width="44" 
-                          height="44" 
-                          viewBox="0 0 44 44" 
+                          width="52" 
+                          height="50" 
+                          viewBox="0 0 52 50" 
                           fill="none" 
                           xmlns="http://www.w3.org/2000/svg"
                           className="cursor-pointer"
-                          onClick={() => handleRowSelect(row.id)}
+                          onClick={() => row.reservationPublicId && handleCouponClick(row.reservationPublicId, row.coupon)}
                         >
-                          <path 
-                            d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
-                            fill="white" 
-                            stroke="#1840B8"
-                          />
+                          <rect x="1" y="1" width="50" height="48" fill="white"/>
+                          <rect x="1" y="1" width="50" height="48" stroke="#DFE7F4" strokeWidth="2"/>
+                          <circle cx="26" cy="25" r="8.5" fill={row.coupon ? '#2754DA' : '#D9D9D9'}/>
                         </svg>
                       </div>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {row.date}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {`${row.name} ${row.phone}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {row.boat}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {row.amount}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {row.memo}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
-                        {row.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                        {row.payment}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <svg width="52" height="50" viewBox="0 0 52 50" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="1" y="1" width="50" height="48" fill="white"/>
-                        <rect x="1" y="1" width="50" height="48" stroke="#DFE7F4" strokeWidth="2"/>
-                        <circle cx="26" cy="25" r="8.5" fill={row.coupon ? '#2754DA' : '#D9D9D9'}/>
-                      </svg>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           </div>
 
+          {/* 페이지네이션 */}
           <div className="flex items-center justify-center gap-[10px] bg-white px-0 py-[50px] w-full max-w-[1056px]">
             <div className="flex items-center gap-[20px]">
               <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -413,27 +706,7 @@ function ReservationManagement() {
               </svg>
             </div>
             <div className="flex items-center gap-[4px]">
-              <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px]">
-                <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
-                  1
-                </span>
-              </div>
-              <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px]">
-                <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
-                  1
-                </span>
-              </div>
               <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px] border border-[#73757C] bg-[#F2F2F2]">
-                <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
-                  1
-                </span>
-              </div>
-              <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px]">
-                <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
-                  1
-                </span>
-              </div>
-              <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px]">
                 <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
                   1
                 </span>

@@ -26,14 +26,14 @@ html, body {
   overflow: hidden;
 }
 
-/* 반응형 스케일링 - 모든 화면 크기에 적용 */
+/* 반응형 스케일링 - 고정 크기로 유지 */
 :root {
   --base-width: 1440px;
   --base-height: 900px;
-  --scale-width: calc(100vw / var(--base-width));
-  --scale-height: calc(100vh / var(--base-height));
-  /* 전역 스케일 변수 - 모든 요소가 동일한 스케일 사용 */
-  --scale: min(var(--scale-width), var(--scale-height));
+  --scale-width: 1;
+  --scale-height: 1;
+  /* 전역 스케일 변수 - 1로 고정 (스케일링 비활성화) */
+  --scale: 1;
 }
 
 /* 기본 스케일 계산 */
@@ -48,33 +48,30 @@ html, body {
   position: relative;
 }
 
-/* 화면 크기 변경 시 스케일 업데이트 */
+/* 화면 크기 변경 시에도 스케일 고정 */
 @media (max-height: 900px) {
   :root {
-    --scale: min(var(--scale-width), var(--scale-height));
+    --scale: 1;
   }
   .layout-wrapper {
     height: calc(100vh / var(--scale));
   }
 }
 
-/* 화면이 매우 가로로 길 때도 잘리지 않도록 min() 유지 */
 @media (min-width: 1440px) {
   :root {
-    /* 가로로 확대되어도 잘리지 않도록 min() 유지 */
-    --scale: min(var(--scale-width), var(--scale-height));
+    --scale: 1;
   }
   .layout-wrapper {
     height: calc(100vh / var(--scale));
   }
 }
 
-/* 사이드바, 헤더, 푸터 모두 스케일링 적용 */
+/* 사이드바, 헤더, 푸터는 고정 크기 유지 (스케일링 제거) */
 .sidebar-responsive,
 .header-responsive,
 .footer-responsive {
-  transform: scale(var(--scale)) !important;
-  transform-origin: left top !important;
+  transform: none !important;
 }
 
 /* 사이드바 스케일링 적용 */
@@ -87,52 +84,17 @@ html, body {
   min-height: 100vh !important;
   max-height: none !important;
   width: 256px !important;
-  background-color: transparent !important;
   z-index: 50 !important;
-  /* 배경이 바닥까지 확실히 채워지도록 */
   overflow-x: hidden !important;
-}
-
-/* 사이드바 배경 확장 - 스케일링 없이 화면 전체 높이로 고정 */
-.sidebar-responsive::before {
-  content: '';
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 256px;
-  height: 100vh;
-  min-height: 100vh;
-  max-height: none;
-  background-color: #F7F8FC;
-  z-index: -1;
-  /* 스케일링 적용하지 않고 실제 크기 유지 */
-  transform: none !important;
-}
-
-/* 사이드바 배경 확장 - 스케일링 후에도 바닥까지 채워지도록 (추가 레이어) */
-.sidebar-responsive::after {
-  content: '';
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 256px;
-  height: 100vh;
-  min-height: 100vh;
-  max-height: none;
-  background-color: #F7F8FC;
-  z-index: -2;
-  /* 스케일링 적용하지 않고 실제 크기 유지 */
-  transform: none !important;
 }
 
 /* 헤더 스케일링 적용 */
 .header-responsive {
   position: fixed !important;
   top: 0 !important;
-  left: calc(256px * var(--scale)) !important;
-  width: 1184px !important;
+  left: 256px !important;
+  width: calc(100vw - 256px) !important;
+  min-width: 1184px !important;
   height: 58px !important;
   z-index: 40 !important;
   transform-origin: left top !important;
@@ -142,8 +104,9 @@ html, body {
 .footer-responsive {
   position: fixed !important;
   bottom: 0 !important;
-  left: calc(256px * var(--scale)) !important;
-  width: 1184px !important;
+  left: 256px !important;
+  width: calc(100vw - 256px) !important;
+  min-width: 1184px !important;
   height: 161px !important;
   z-index: 40 !important;
   transform-origin: left bottom !important;

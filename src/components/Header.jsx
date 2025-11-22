@@ -1,10 +1,14 @@
 import { useNavigate } from 'react-router-dom';
+import { logout, getCurrentUser } from '../utils/auth';
 
 function Header() {
   const navigate = useNavigate();
   
   // 현재 날짜 계산
   const today = new Date();
+  
+  // 현재 로그인한 사용자 정보
+  const currentUser = getCurrentUser() || '관리자';
   
   const formatDate = (date) => {
     const year = date.getFullYear();
@@ -17,6 +21,7 @@ function Header() {
 
   const handleLogout = () => {
     if (window.confirm('로그아웃 하시겠습니까?')) {
+      logout();
       navigate('/login');
     }
   };
@@ -26,41 +31,23 @@ function Header() {
   };
 
   return (
-    <header className="fixed top-0 h-[58px] bg-[#FFFFFF] z-40 flex items-center header-responsive" style={{ paddingLeft: 'calc(42px * var(--scale))', paddingRight: 'calc(42px * var(--scale))' }}>
-      <p className="font-medium leading-[28px] text-[#73757c] text-[20px] whitespace-nowrap" style={{ fontSize: 'calc(20px * var(--scale))', lineHeight: 'calc(28px * var(--scale))' }}>
-        <span className="font-bold">닉네임</span>님 좋은 하루 되세요!
+    <header className="fixed top-0 h-[58px] bg-[#FFFFFF] z-40 flex items-center header-responsive" style={{ paddingLeft: '42px', paddingRight: '42px' }}>
+      <p className="font-medium leading-[28px] text-[#73757c] text-[20px] whitespace-nowrap">
+        <span className="font-bold">{currentUser}</span>님 좋은 하루 되세요!
       </p>
-      <p className="font-medium leading-[28px] text-[20px] text-[#73757c] whitespace-nowrap" style={{ marginLeft: 'calc(235px * var(--scale))', fontSize: 'calc(20px * var(--scale))', lineHeight: 'calc(28px * var(--scale))' }}>
+      <p className="font-medium leading-[28px] text-[20px] text-[#73757c] whitespace-nowrap" style={{ marginLeft: '50px' }}>
         {formatDate(today)}
       </p>
-      <div className="ml-auto flex" style={{ gap: 'calc(10px * var(--scale))' }}>
+      <div className="ml-auto flex gap-[10px]">
         <button 
           onClick={handleHomepage}
           className="h-[36px] px-[20px] py-[4px] rounded-[20px] font-medium leading-normal text-[20px] text-[#2754da] cursor-pointer hover:opacity-80"
-          style={{
-            height: 'calc(36px * var(--scale))',
-            paddingLeft: 'calc(20px * var(--scale))',
-            paddingRight: 'calc(20px * var(--scale))',
-            paddingTop: 'calc(4px * var(--scale))',
-            paddingBottom: 'calc(4px * var(--scale))',
-            fontSize: 'calc(20px * var(--scale))',
-            borderRadius: 'calc(20px * var(--scale))'
-          }}
         >
           홈페이지 바로가기
         </button>
         <button 
           onClick={handleLogout}
           className="h-[36px] px-[20px] py-[4px] rounded-[20px] font-medium leading-normal text-[20px] text-[#2754da] cursor-pointer hover:opacity-80"
-          style={{
-            height: 'calc(36px * var(--scale))',
-            paddingLeft: 'calc(20px * var(--scale))',
-            paddingRight: 'calc(20px * var(--scale))',
-            paddingTop: 'calc(4px * var(--scale))',
-            paddingBottom: 'calc(4px * var(--scale))',
-            fontSize: 'calc(20px * var(--scale))',
-            borderRadius: 'calc(20px * var(--scale))'
-          }}
         >
           로그아웃
         </button>
