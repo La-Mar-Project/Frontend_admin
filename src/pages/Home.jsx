@@ -207,13 +207,21 @@ function Home() {
 
   // 출항 여부 보류 API 호출
   const handlePendingDeparture = async () => {
+    console.log('[Home] 출항 보류 버튼 클릭');
+    console.log('[Home] schedulePublicId:', schedulePublicId);
+    
     if (!schedulePublicId) {
+      console.warn('[Home] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
     const selectedMessages = smsTemplates.pending.filter(sms => sms.selected);
+    console.log('[Home] 선택된 출항 보류 메시지 개수:', selectedMessages.length);
+    console.log('[Home] 선택된 출항 보류 메시지:', selectedMessages);
+    
     if (selectedMessages.length === 0) {
+      console.warn('[Home] 체크된 메시지가 없습니다.');
       alert('체크된 메시지를 선택해주세요.');
       return;
     }
@@ -221,36 +229,58 @@ function Home() {
     try {
       // 체크된 각 메시지에 대해 API 호출
       for (const message of selectedMessages) {
-        const response = await apiPost(
-          `/schedules/${schedulePublicId}/departure/delay`,
-          {
-            scheduleStatus: 'DELAYED',
-            content: message.content
-          }
-        );
+        const apiUrl = `/schedules/${schedulePublicId}/departure/delay`;
+        const requestBody = {
+          scheduleStatus: 'DELAYED',
+          content: message.content
+        };
+        
+        console.log('[Home] 출항 보류 API 요청 시작');
+        console.log('[Home] API URL:', apiUrl);
+        console.log('[Home] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[Home] 출항 보류 API 응답:', response);
+        console.log('[Home] 응답 상태:', response.status, response.statusText);
+        console.log('[Home] 응답 OK:', response.ok);
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[Home] 출항 보류 API 오류 응답:', errorData);
           throw new Error(errorData.message || '출항 연기 요청 실패');
         }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[Home] 출항 보류 API 성공 응답:', responseData);
       }
 
+      console.log('[Home] 출항 보류 메시지 전송 완료:', selectedMessages.length, '개');
       alert(`${selectedMessages.length}개의 출항 연기 메시지가 전송되었습니다.`);
     } catch (error) {
-      console.error('출항 연기 요청 실패:', error);
+      console.error('[Home] 출항 연기 요청 실패:', error);
+      console.error('[Home] 에러 상세:', error.message, error.stack);
       alert(`출항 연기 요청 실패: ${error.message}`);
     }
   };
 
   // 출항 취소 결정 API 호출
   const handleCancelDeparture = async () => {
+    console.log('[Home] 출항 취소 버튼 클릭');
+    console.log('[Home] schedulePublicId:', schedulePublicId);
+    
     if (!schedulePublicId) {
+      console.warn('[Home] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
     const selectedMessages = smsTemplates.cancel.filter(sms => sms.selected);
+    console.log('[Home] 선택된 출항 취소 메시지 개수:', selectedMessages.length);
+    console.log('[Home] 선택된 출항 취소 메시지:', selectedMessages);
+    
     if (selectedMessages.length === 0) {
+      console.warn('[Home] 체크된 메시지가 없습니다.');
       alert('체크된 메시지를 선택해주세요.');
       return;
     }
@@ -258,36 +288,58 @@ function Home() {
     try {
       // 체크된 각 메시지에 대해 API 호출
       for (const message of selectedMessages) {
-        const response = await apiPost(
-          `/schedules/${schedulePublicId}/departure/cancel`,
-          {
-            scheduleStatus: 'CANCELED',
-            content: message.content
-          }
-        );
+        const apiUrl = `/schedules/${schedulePublicId}/departure/cancel`;
+        const requestBody = {
+          scheduleStatus: 'CANCELED',
+          content: message.content
+        };
+        
+        console.log('[Home] 출항 취소 API 요청 시작');
+        console.log('[Home] API URL:', apiUrl);
+        console.log('[Home] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[Home] 출항 취소 API 응답:', response);
+        console.log('[Home] 응답 상태:', response.status, response.statusText);
+        console.log('[Home] 응답 OK:', response.ok);
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[Home] 출항 취소 API 오류 응답:', errorData);
           throw new Error(errorData.message || '출항 취소 요청 실패');
         }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[Home] 출항 취소 API 성공 응답:', responseData);
       }
 
+      console.log('[Home] 출항 취소 메시지 전송 완료:', selectedMessages.length, '개');
       alert(`${selectedMessages.length}개의 출항 취소 메시지가 전송되었습니다.`);
     } catch (error) {
-      console.error('출항 취소 요청 실패:', error);
+      console.error('[Home] 출항 취소 요청 실패:', error);
+      console.error('[Home] 에러 상세:', error.message, error.stack);
       alert(`출항 취소 요청 실패: ${error.message}`);
     }
   };
 
   // 출항 확정 결정 API 호출
   const handleConfirmDeparture = async () => {
+    console.log('[Home] 출항 확정 버튼 클릭');
+    console.log('[Home] schedulePublicId:', schedulePublicId);
+    
     if (!schedulePublicId) {
+      console.warn('[Home] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
     const selectedMessages = smsTemplates.confirm.filter(sms => sms.selected);
+    console.log('[Home] 선택된 출항 확정 메시지 개수:', selectedMessages.length);
+    console.log('[Home] 선택된 출항 확정 메시지:', selectedMessages);
+    
     if (selectedMessages.length === 0) {
+      console.warn('[Home] 체크된 메시지가 없습니다.');
       alert('체크된 메시지를 선택해주세요.');
       return;
     }
@@ -295,23 +347,37 @@ function Home() {
     try {
       // 체크된 각 메시지에 대해 API 호출
       for (const message of selectedMessages) {
-        const response = await apiPost(
-          `/schedules/${schedulePublicId}/departure/confirmation`,
-          {
-            scheduleStatus: 'CONFIRMED',
-            content: message.content
-          }
-        );
+        const apiUrl = `/schedules/${schedulePublicId}/departure/confirmation`;
+        const requestBody = {
+          scheduleStatus: 'CONFIRMED',
+          content: message.content
+        };
+        
+        console.log('[Home] 출항 확정 API 요청 시작');
+        console.log('[Home] API URL:', apiUrl);
+        console.log('[Home] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[Home] 출항 확정 API 응답:', response);
+        console.log('[Home] 응답 상태:', response.status, response.statusText);
+        console.log('[Home] 응답 OK:', response.ok);
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[Home] 출항 확정 API 오류 응답:', errorData);
           throw new Error(errorData.message || '출항 확정 요청 실패');
         }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[Home] 출항 확정 API 성공 응답:', responseData);
       }
 
+      console.log('[Home] 출항 확정 메시지 전송 완료:', selectedMessages.length, '개');
       alert(`${selectedMessages.length}개의 출항 확정 메시지가 전송되었습니다.`);
     } catch (error) {
-      console.error('출항 확정 요청 실패:', error);
+      console.error('[Home] 출항 확정 요청 실패:', error);
+      console.error('[Home] 에러 상세:', error.message, error.stack);
       alert(`출항 확정 요청 실패: ${error.message}`);
     }
   };

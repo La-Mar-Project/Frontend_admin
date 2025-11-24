@@ -65,34 +65,71 @@ function ReservationManagement() {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('[ReservationManagement] 예약 목록 API 응답:', result);
+        console.log('[ReservationManagement] 예약 목록 API 응답 (전체):', result);
+        console.log('[ReservationManagement] 예약 목록 API 응답 타입:', typeof result);
+        console.log('[ReservationManagement] 예약 목록 API 응답이 배열인가?', Array.isArray(result));
         
-        if (result.success && result.data) {
-          const reservationsData = Array.isArray(result.data) ? result.data : 
-                                 (result.data.content ? result.data.content : []);
+        // API 응답이 배열인지 객체인지 확인
+        let reservationsData = [];
+        
+        if (Array.isArray(result)) {
+          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
+          reservationsData = result;
+          console.log('[ReservationManagement] 배열 형태 응답, 데이터 개수:', reservationsData.length);
+        } else if (result.success && result.data) {
+          // 응답이 객체이고 success/data 구조인 경우
+          reservationsData = Array.isArray(result.data) ? result.data : 
+                           (result.data.content ? result.data.content : []);
+          console.log('[ReservationManagement] 객체 형태 응답, 데이터 개수:', reservationsData.length);
+        } else if (result.data) {
+          // data 필드만 있는 경우
+          reservationsData = Array.isArray(result.data) ? result.data : [];
+          console.log('[ReservationManagement] data 필드만 있는 응답, 데이터 개수:', reservationsData.length);
+        } else {
+          console.warn('[ReservationManagement] 알 수 없는 응답 구조:', result);
+          reservationsData = [];
+        }
+        
+        console.log('[ReservationManagement] 처리할 예약 데이터:', reservationsData);
+        
+        const formattedReservations = reservationsData.map((reservation, index) => {
+          console.log(`[ReservationManagement] 예약 ${index + 1} 원본 데이터:`, reservation);
           
-          const formattedReservations = reservationsData.map((reservation) => ({
-            id: reservation.reservationPublicId || reservation.reservation_public_id || reservation.id,
-            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
-            date: formatDate(reservation.departureDate || reservation.date || reservation.scheduleDate),
-            name: reservation.name || reservation.username || '예약자',
-            phone: reservation.phone || reservation.phoneNumber || '',
-            headCount: reservation.headCount || reservation.head_count || 0,
-            boat: reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
-            amount: reservation.price ? reservation.price.toLocaleString() : '0',
-            memo: reservation.memo || reservation.notification || '',
+          // reservationPublicId 찾기 (reservationPublicId 우선, 여러 필드명 체크 및 타입 변환)
+          const reservationId = reservation.reservationPublicId || 
+                               reservation.reservation_public_id || 
+                               reservation.reservation_id || 
+                               reservation.id ||
+                               reservation.reservationId;
+          
+          // 숫자일 경우 문자열로 변환
+          const reservationIdStr = reservationId ? String(reservationId) : null;
+          
+          // OpenAPI 스펙에 따른 필드 매핑
+          const formatted = {
+            id: reservationIdStr || `reservation-${index}`,
+            reservationPublicId: reservationIdStr, // null일 수 있음
+            date: formatDate(reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate),
+            name: reservation.name || reservation.username || reservation.userName || '예약자',
+            phone: reservation.phone || reservation.phoneNumber || reservation.phone_number || '',
+            headCount: reservation.headCount || reservation.head_count || reservation.headCount || 0,
+            boat: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
+            amount: (reservation.totalPrice || reservation.price || 0).toLocaleString(),
+            memo: reservation.memo || reservation.notification || reservation.description || '',
             status: getStatusText(reservation.process),
             statusColor: getStatusColor(reservation.process),
-            payment: reservation.paymentInfo || reservation.payment || '입금정보 없음',
+            payment: reservation.paymentInfo || reservation.payment || reservation.payment_info || '입금정보 없음',
             coupon: reservation.hasCoupon || reservation.coupon || false,
             process: reservation.process
-          }));
+          };
           
-          setReservations(formattedReservations);
-        } else {
-          // 데이터가 없거나 형식이 다른 경우 빈 배열 설정
-          setReservations([]);
-        }
+          console.log(`[ReservationManagement] 예약 ${index + 1} 포맷된 데이터:`, formatted);
+          console.log(`[ReservationManagement] 예약 ${index + 1} reservationPublicId:`, formatted.reservationPublicId);
+          return formatted;
+        });
+        
+        console.log('[ReservationManagement] 최종 포맷된 예약 목록:', formattedReservations);
+        setReservations(formattedReservations);
       } else {
         // 에러 응답의 본문 확인
         let errorMessage = `HTTP ${response.status}`;
@@ -217,66 +254,92 @@ function ReservationManagement() {
       
       if (response.ok) {
         const result = await response.json();
-        console.log('[ReservationManagement] 검색 결과:', result);
+        console.log('[ReservationManagement] 검색 결과 (전체):', result);
         
-        if (result.success && result.data) {
-          const allReservationsData = Array.isArray(result.data) ? result.data : 
-                                 (result.data.content ? result.data.content : []);
-          
-          // 클라이언트에서 필터링
-          let filteredReservations = allReservationsData;
-          
-          // 날짜 필터
-          if (startDate || endDate) {
+        // API 응답이 배열인지 객체인지 확인
+        let allReservationsData = [];
+        
+        if (Array.isArray(result)) {
+          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
+          allReservationsData = result;
+        } else if (result.success && result.data) {
+          // 응답이 객체이고 success/data 구조인 경우
+          allReservationsData = Array.isArray(result.data) ? result.data : 
+                               (result.data.content ? result.data.content : []);
+        } else if (result.data) {
+          // data 필드만 있는 경우
+          allReservationsData = Array.isArray(result.data) ? result.data : [];
+        }
+        
+        console.log('[ReservationManagement] 검색 - 처리할 예약 데이터:', allReservationsData);
+        
+        // 클라이언트에서 필터링
+        let filteredReservations = allReservationsData;
+        
+        // 날짜 필터
+        if (startDate || endDate) {
+          filteredReservations = filteredReservations.filter(reservation => {
+            const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
+            if (!reservationDate) return false;
+            const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
+            if (startDate && dateKey < startDate) return false;
+            if (endDate && dateKey > endDate) return false;
+            return true;
+          });
+        }
+        
+        // 배 필터
+        if (selectedBoat) {
+          filteredReservations = filteredReservations.filter(reservation => {
+            const reservationShipId = reservation.ship?.shipId || reservation.shipId;
+            return String(reservationShipId) === String(selectedBoat);
+          });
+        }
+        
+        // 타입 필터
+        if (selectedType) {
+          const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
+          const apiType = typeMap[selectedType];
+          if (apiType) {
             filteredReservations = filteredReservations.filter(reservation => {
-              const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
-              if (!reservationDate) return false;
-              const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
-              if (startDate && dateKey < startDate) return false;
-              if (endDate && dateKey > endDate) return false;
-              return true;
+              const reservationType = reservation.type || reservation.reservationType;
+              return reservationType === apiType;
             });
           }
+        }
+        
+        const formattedReservations = filteredReservations.map((reservation, index) => {
+          // reservationPublicId 찾기 (reservationPublicId 우선, 여러 필드명 체크 및 타입 변환)
+          const reservationId = reservation.reservationPublicId || 
+                               reservation.reservation_public_id || 
+                               reservation.reservation_id || 
+                               reservation.id ||
+                               reservation.reservationId;
           
-          // 배 필터
-          if (selectedBoat) {
-            filteredReservations = filteredReservations.filter(reservation => {
-              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
-              return String(reservationShipId) === String(selectedBoat);
-            });
-          }
+          // 숫자일 경우 문자열로 변환
+          const reservationIdStr = reservationId ? String(reservationId) : null;
           
-          // 타입 필터
-          if (selectedType) {
-            const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
-            const apiType = typeMap[selectedType];
-            if (apiType) {
-              filteredReservations = filteredReservations.filter(reservation => {
-                const reservationType = reservation.type || reservation.reservationType;
-                return reservationType === apiType;
-              });
-            }
-          }
-          
-          const formattedReservations = filteredReservations.map((reservation) => ({
-            id: reservation.reservationPublicId || reservation.reservation_public_id || reservation.id,
-            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
-            date: formatDate(reservation.departureDate || reservation.date || reservation.scheduleDate),
-            name: reservation.name || reservation.username || '예약자',
-            phone: reservation.phone || reservation.phoneNumber || '',
-            headCount: reservation.headCount || reservation.head_count || 0,
-            boat: reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
-            amount: reservation.price ? reservation.price.toLocaleString() : '0',
-            memo: reservation.memo || reservation.notification || '',
+          // OpenAPI 스펙에 따른 필드 매핑
+          return {
+            id: reservationIdStr || `reservation-${index}`,
+            reservationPublicId: reservationIdStr, // null일 수 있음
+            date: formatDate(reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate),
+            name: reservation.name || reservation.username || reservation.userName || '예약자',
+            phone: reservation.phone || reservation.phoneNumber || reservation.phone_number || '',
+            headCount: reservation.headCount || reservation.head_count || reservation.headCount || 0,
+            boat: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || '배 정보 없음',
+            amount: (reservation.totalPrice || reservation.price || 0).toLocaleString(),
+            memo: reservation.memo || reservation.notification || reservation.description || '',
             status: getStatusText(reservation.process),
             statusColor: getStatusColor(reservation.process),
-            payment: reservation.paymentInfo || reservation.payment || '입금정보 없음',
+            payment: reservation.paymentInfo || reservation.payment || reservation.payment_info || '입금정보 없음',
             coupon: reservation.hasCoupon || reservation.coupon || false,
             process: reservation.process
-          }));
-          
-          setReservations(formattedReservations);
-        }
+          };
+        });
+        
+        console.log('[ReservationManagement] 검색 - 최종 포맷된 예약 목록:', formattedReservations);
+        setReservations(formattedReservations);
       } else {
         console.error('[ReservationManagement] 검색 실패:', response.status);
         alert('검색에 실패했습니다.');
@@ -290,19 +353,82 @@ function ReservationManagement() {
   };
 
   // 쿠폰 버튼 클릭 핸들러
-  const handleCouponClick = async (reservationPublicId, currentCouponState) => {
+  const handleCouponClick = async (reservationId, currentCouponState) => {
+    if (!reservationId) {
+      console.warn('[ReservationManagement] reservationId가 없습니다.');
+      return;
+    }
+
+    console.log('[ReservationManagement] 쿠폰 클릭 - reservationId:', reservationId, '현재 상태:', currentCouponState);
+
+    // 낙관적 업데이트: 즉시 UI 업데이트
+    const newCouponState = !currentCouponState;
+    setReservations(prevReservations => 
+      prevReservations.map(reservation => {
+        // reservationPublicId 또는 id로 매칭
+        const matchId = reservation.reservationPublicId || reservation.id;
+        if (matchId === reservationId) {
+          return { ...reservation, coupon: newCouponState };
+        }
+        return reservation;
+      })
+    );
+
     try {
-      const response = await apiPost(`/reservations/${reservationPublicId}/coupon`, {});
+      const response = await apiPost(`/reservations/${reservationId}/coupon`, {});
       
       if (response.ok) {
-        // 성공 시 목록 다시 불러오기
-        await fetchReservations();
+        const result = await response.json();
+        console.log('[ReservationManagement] 쿠폰 설정 성공:', result);
+        
+        // API 응답에 따라 상태 업데이트 (서버 응답이 최종 상태)
+        // result.data가 null이 아닌지 확인
+        if (result.data !== undefined && result.data !== null) {
+          const serverCouponState = result.data.hasCoupon !== undefined ? result.data.hasCoupon : 
+                                   result.data.coupon !== undefined ? result.data.coupon : newCouponState;
+          
+          setReservations(prevReservations => 
+            prevReservations.map(reservation => {
+              const matchId = reservation.reservationPublicId || reservation.id;
+              if (matchId === reservationId) {
+                return { ...reservation, coupon: serverCouponState };
+              }
+              return reservation;
+            })
+          );
+        } else {
+          // result.data가 없거나 null인 경우, 낙관적 업데이트 상태 유지
+          console.log('[ReservationManagement] result.data가 없거나 null입니다. 낙관적 업데이트 상태를 유지합니다.');
+        }
       } else {
-        const errorData = await response.json();
+        // 실패 시 이전 상태로 롤백
+        setReservations(prevReservations => 
+          prevReservations.map(reservation => {
+            const matchId = reservation.reservationPublicId || reservation.id;
+            if (matchId === reservationId) {
+              return { ...reservation, coupon: currentCouponState };
+            }
+            return reservation;
+          })
+        );
+        
+        const errorData = await response.json().catch(() => ({}));
         alert(`쿠폰 설정 실패: ${errorData.message || '알 수 없는 오류'}`);
       }
     } catch (error) {
       console.error('[ReservationManagement] 쿠폰 설정 오류:', error);
+      
+      // 에러 발생 시 이전 상태로 롤백
+      setReservations(prevReservations => 
+        prevReservations.map(reservation => {
+          const matchId = reservation.reservationPublicId || reservation.id;
+          if (matchId === reservationId) {
+            return { ...reservation, coupon: currentCouponState };
+          }
+          return reservation;
+        })
+      );
+      
       alert('쿠폰 설정 중 오류가 발생했습니다.');
     }
   };
@@ -717,8 +843,20 @@ function ReservationManagement() {
                           viewBox="0 0 52 50" 
                           fill="none" 
                           xmlns="http://www.w3.org/2000/svg"
-                          className="cursor-pointer"
-                          onClick={() => row.reservationPublicId && handleCouponClick(row.reservationPublicId, row.coupon)}
+                          className="cursor-pointer hover:opacity-80 transition-opacity"
+                          onClick={() => {
+                            // reservationPublicId 또는 id를 사용
+                            const reservationId = row.reservationPublicId || row.id;
+                            console.log('[ReservationManagement] 쿠폰 클릭 - row 데이터:', row);
+                            console.log('[ReservationManagement] 쿠폰 클릭 - 사용할 ID:', reservationId);
+                            
+                            if (reservationId) {
+                              handleCouponClick(reservationId, row.coupon);
+                            } else {
+                              console.error('[ReservationManagement] reservationPublicId와 id가 모두 없어 쿠폰을 발급할 수 없습니다.', row);
+                              alert('예약 ID를 찾을 수 없어 쿠폰을 발급할 수 없습니다.');
+                            }
+                          }}
                         >
                         <rect x="1" y="1" width="50" height="48" fill="white"/>
                         <rect x="1" y="1" width="50" height="48" stroke="#DFE7F4" strokeWidth="2"/>

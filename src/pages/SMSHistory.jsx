@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { apiPost } from '../utils/api';
+import { apiGet } from '../utils/api';
 
 function SMSHistory() {
   const [selectedRows, setSelectedRows] = useState([]);
@@ -32,38 +32,50 @@ function SMSHistory() {
       }
       
       const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      // POST 요청 (빈 body 또는 필요한 데이터 전송)
-      const response = await apiPost(`/sms/search${queryString}`, {});
+      const apiUrl = `/sms/search${queryString}`;
+      console.log('[SMSHistory] API 요청 URL:', apiUrl);
+      
+      // GET 요청
+      const response = await apiGet(apiUrl);
+      
+      console.log('[SMSHistory] API 응답 상태:', response.status, response.statusText);
       
       if (response.ok) {
         const result = await response.json();
         console.log('[SMSHistory] SMS 내역 조회 결과:', result);
         
-        if (result.success && result.data) {
-          // API 응답 데이터 변환
-          const smsData = Array.isArray(result.data) ? result.data : 
-                         (result.data.content ? result.data.content : []);
-          
-          const formattedData = smsData.map((sms, index) => ({
-            id: sms.id || sms.smsId || (page * 10 + index + 1),
-            smsType: sms.smsType || sms.type || '사용중',
-            name: sms.name || sms.templateName || '',
-            contact: sms.contact || sms.recipientName || sms.name || '',
-            phone: sms.phone || sms.phoneNumber || sms.recipientPhone || '',
-            sendTime: sms.sendTime || sms.sentAt || sms.createdAt || '',
-            status: sms.status || (sms.result === 'SUCCESS' ? '발송완료' : sms.result === 'FAILURE' ? '발송실패' : '발송완료')
-          }));
-          
-          setSmsHistoryData(formattedData);
-        } else {
-          setSmsHistoryData([]);
+        // API 응답이 배열인지 객체인지 확인
+        let smsData = [];
+        
+        if (Array.isArray(result)) {
+          smsData = result;
+        } else if (result.success && result.data) {
+          smsData = Array.isArray(result.data) ? result.data : 
+                   (result.data.content ? result.data.content : []);
+        } else if (result.data) {
+          smsData = Array.isArray(result.data) ? result.data : [];
         }
+        
+        const formattedData = smsData.map((sms, index) => ({
+          id: sms.id || sms.smsId || (page * 10 + index + 1),
+          smsType: sms.smsType || sms.type || '사용중',
+          name: sms.name || sms.templateName || '',
+          contact: sms.contact || sms.recipientName || sms.name || '',
+          phone: sms.phone || sms.phoneNumber || sms.recipientPhone || '',
+          sendTime: sms.sendTime || sms.sentAt || sms.createdAt || '',
+          status: sms.status || (sms.result === 'SUCCESS' ? '발송완료' : sms.result === 'FAILURE' ? '발송실패' : '발송완료')
+        }));
+        
+        setSmsHistoryData(formattedData);
       } else {
         console.error('[SMSHistory] SMS 내역 조회 실패:', response.status, response.statusText);
+        console.error('[SMSHistory] 실패한 URL:', apiUrl);
+        
         // 404나 405 같은 에러의 경우 빈 배열로 설정 (백엔드 API 미구현 가능성)
         setSmsHistoryData([]);
         if (response.status === 404) {
           console.warn('[SMSHistory] 백엔드 API가 아직 구현되지 않았을 수 있습니다: /sms/search');
+          console.warn('[SMSHistory] 404 에러 - API 엔드포인트를 확인해주세요.');
         }
       }
     } catch (error) {

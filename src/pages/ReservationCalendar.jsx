@@ -22,6 +22,8 @@ function ReservationCalendar() {
   const [allReservations, setAllReservations] = useState([]); // 전체 예약 목록 저장
   const [calendarData, setCalendarData] = useState([]); // 실제 API에서 가져온 달력 데이터
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
+  const [selectedReservationDetail, setSelectedReservationDetail] = useState(null); // 선택된 예약 상세 정보
+  const [showReservationDetailModal, setShowReservationDetailModal] = useState(false); // 예약 상세 정보 모달
 
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -86,15 +88,33 @@ function ReservationCalendar() {
           
           if (reservationsResponse.ok) {
             const reservationsResult = await reservationsResponse.json();
-            console.log('[ReservationCalendar] 예약 목록 API 응답:', reservationsResult);
+            console.log('[ReservationCalendar] 예약 목록 API 응답 (전체):', reservationsResult);
+            console.log('[ReservationCalendar] 예약 목록 API 응답 타입:', typeof reservationsResult);
+            console.log('[ReservationCalendar] 예약 목록 API 응답이 배열인가?', Array.isArray(reservationsResult));
             
-            if (reservationsResult.success && reservationsResult.data) {
-              const allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : 
+            // API 응답이 배열인지 객체인지 확인
+            let allReservations = [];
+            
+            if (Array.isArray(reservationsResult)) {
+              // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
+              allReservations = reservationsResult;
+              console.log('[ReservationCalendar] 배열 형태 응답, 데이터 개수:', allReservations.length);
+            } else if (reservationsResult.success && reservationsResult.data) {
+              // 응답이 객체이고 success/data 구조인 경우
+              allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : 
                            (reservationsResult.data.content ? reservationsResult.data.content : []);
+              console.log('[ReservationCalendar] 객체 형태 응답, 데이터 개수:', allReservations.length);
+            } else if (reservationsResult.data) {
+              // data 필드만 있는 경우
+              allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : [];
+              console.log('[ReservationCalendar] data 필드만 있는 응답, 데이터 개수:', allReservations.length);
+            }
+            
+            if (allReservations.length > 0) {
               
               // 해당 월의 예약만 필터링
               reservations = allReservations.filter(reservation => {
-                const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+                const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
                 if (!reservationDate) return false;
                 const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
                 return dateKey >= fromDate && dateKey <= toDate;
@@ -103,7 +123,7 @@ function ReservationCalendar() {
               // 예약 정보에서 날짜별로 그룹화하여 스케줄 정보 생성
               const scheduleMap = new Map();
               reservations.forEach(reservation => {
-                const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+                const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
                 if (reservationDate) {
                   const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
                   if (!scheduleMap.has(dateKey)) {
@@ -111,8 +131,8 @@ function ReservationCalendar() {
                       departure: reservationDate,
                       date: dateKey,
                       ship: reservation.ship || {},
-                      fishType: reservation.ship?.fishType || reservation.fishType || '쭈갑',
-                      price: reservation.ship?.price || reservation.price || 90000,
+                      fishType: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || '쭈갑',
+                      price: reservation.totalPrice || reservation.ship?.price || reservation.price || 90000,
                       maxHeadCount: reservation.ship?.maxHeadCount || 18,
                       tide: 1, // 기본값
                       schedulePublicId: reservation.schedulePublicId || reservation.schedule_public_id
@@ -342,8 +362,11 @@ function ReservationCalendar() {
     
     // 예약 정보 가져오기
     try {
-      const searchDate = `${year}-${String(month).padStart(2, '0')}-${String(dayData.date).padStart(2, '0')}`;
+      // dayData.date가 문자열일 수 있으므로 숫자로 변환
+      const dayNumber = typeof dayData.date === 'string' ? parseInt(dayData.date.replace(/[^0-9]/g, '')) : dayData.date;
+      const searchDate = `${year}-${String(month).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
       console.log('[ReservationCalendar] 예약 조회 날짜:', searchDate);
+      console.log('[ReservationCalendar] dayData:', dayData);
       
       // 예약 정보 가져오기 (파라미터 없이 전체 조회 후 클라이언트에서 필터링)
       const response = await apiGet('/reservations');
@@ -353,57 +376,231 @@ function ReservationCalendar() {
         console.log('[ReservationCalendar] 예약 목록 API 응답:', result);
         
         let reservations = [];
-        if (result.success && result.data) {
-          // API 응답 데이터 변환 및 필터링
-          const allReservationsData = Array.isArray(result.data) ? result.data : 
-                                  (result.data.content ? result.data.content : []);
-          
-          // 클릭한 날짜의 예약만 필터링
-          const filteredReservations = allReservationsData.filter(reservation => {
-            const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
-            if (!reservationDate) return false;
-            const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
-            if (dateKey !== searchDate) return false;
+        
+        // API 응답이 배열인지 객체인지 확인
+        let allReservationsData = [];
+        
+        if (Array.isArray(result)) {
+          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
+          allReservationsData = result;
+        } else if (result.success && result.data) {
+          // 응답이 객체이고 success/data 구조인 경우
+          allReservationsData = Array.isArray(result.data) ? result.data : 
+                              (result.data.content ? result.data.content : []);
+        } else if (result.data) {
+          // data 필드만 있는 경우
+          allReservationsData = Array.isArray(result.data) ? result.data : [];
+        }
+        
+        console.log('[ReservationCalendar] 처리할 예약 데이터:', allReservationsData);
+        console.log('[ReservationCalendar] 첫 번째 예약 데이터 구조:', allReservationsData[0]);
+        
+        // 클릭한 날짜의 예약만 필터링
+        let filteredReservations = allReservationsData;
+        
+        // 날짜 필터링 - 날짜 필드 확인 및 필터링
+        const reservationsWithDate = allReservationsData.filter(r => {
+          const date = r.scheduleDeparture || r.departureDate || r.date || r.scheduleDate || r.schedule?.departure;
+          return date;
+        });
+        
+        console.log('[ReservationCalendar] 날짜가 있는 예약 개수:', reservationsWithDate.length);
+        console.log('[ReservationCalendar] 검색 날짜:', searchDate);
+        
+        if (reservationsWithDate.length > 0) {
+          // 날짜가 있는 예약만 날짜 필터링 적용
+          filteredReservations = allReservationsData.filter(reservation => {
+            const reservationDate = reservation.scheduleDeparture || 
+                                   reservation.departureDate || 
+                                   reservation.date || 
+                                   reservation.scheduleDate ||
+                                   reservation.schedule?.departure;
             
-            // 배 필터 적용
-            if (selectedBoat) {
-              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
-              if (String(reservationShipId) !== String(selectedBoat)) return false;
+            if (!reservationDate) {
+              // 날짜가 없으면 일단 포함 (나중에 배/타입 필터로 걸러질 수 있음)
+              return true;
             }
             
-            // 타입 필터 적용
-            if (selectedType) {
-              const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
-              const apiType = typeMap[selectedType];
-              const reservationType = reservation.type || reservation.reservationType;
-              if (apiType && reservationType !== apiType) return false;
-            }
-            
-            return true;
+            const dateKey = reservationDate.split('T')[0];
+            const matches = dateKey === searchDate;
+            console.log('[ReservationCalendar] 날짜 비교:', dateKey, '===', searchDate, '?', matches);
+            return matches;
           });
+        } else {
+          // 날짜가 없는 경우 모든 예약 표시 (배/타입 필터만 적용)
+          console.log('[ReservationCalendar] 날짜 정보가 없어서 모든 예약 표시');
+        }
+        
+        console.log('[ReservationCalendar] 날짜 필터링 후 개수:', filteredReservations.length);
+        
+        // 배 필터 적용 (배 ID가 있는 예약만 필터링)
+        if (selectedBoat) {
+          const beforeBoatFilter = filteredReservations.length;
+          console.log('[ReservationCalendar] 배 필터 적용 - 선택된 배 ID:', selectedBoat);
           
-          reservations = filteredReservations.map(reservation => ({
-            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
-            name: reservation.name || reservation.username || reservation.nickname || '예약자',
+          // 배 ID가 있는 예약이 있는지 확인
+          const hasShipId = filteredReservations.some(r => r.ship?.shipId || r.shipId);
+          
+          if (hasShipId) {
+            // 배 ID가 있는 경우만 필터링
+            filteredReservations = filteredReservations.filter(reservation => {
+              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
+              console.log('[ReservationCalendar] 예약의 배 ID:', reservationShipId, '타입:', typeof reservationShipId, '선택된 배:', selectedBoat, '타입:', typeof selectedBoat);
+              
+              if (!reservationShipId) {
+                // 배 ID가 없으면 제외
+                console.log('[ReservationCalendar] 배 ID가 없어서 제외');
+                return false;
+              }
+              
+              const matches = String(reservationShipId) === String(selectedBoat);
+              if (!matches) {
+                console.log('[ReservationCalendar] 배 필터 제외:', reservationShipId, '!==', selectedBoat);
+              } else {
+                console.log('[ReservationCalendar] 배 필터 통과:', reservationShipId);
+              }
+              return matches;
+            });
+          } else {
+            // 배 ID가 없는 경우 모든 예약 표시 (배 필터 무시)
+            console.log('[ReservationCalendar] 배 ID가 없어서 배 필터 무시');
+          }
+          
+          console.log('[ReservationCalendar] 배 필터링 후 개수:', filteredReservations.length, '(이전:', beforeBoatFilter, ')');
+        } else {
+          console.log('[ReservationCalendar] 배 필터 미적용 (배 미선택)');
+        }
+        
+        // 타입 필터 적용 (타입 필드가 있는 예약만 필터링)
+        if (selectedType) {
+          const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
+          const apiType = typeMap[selectedType];
+          if (apiType) {
+            const beforeTypeFilter = filteredReservations.length;
+            
+            // 타입 필드가 있는 예약이 있는지 확인
+            const hasTypeField = filteredReservations.some(r => r.type || r.reservationType);
+            
+            if (hasTypeField) {
+              // 타입 필드가 있는 경우만 필터링
+              filteredReservations = filteredReservations.filter(reservation => {
+                const reservationType = reservation.type || reservation.reservationType;
+                if (!reservationType) {
+                  // 타입 필드가 없으면 제외
+                  console.log('[ReservationCalendar] 타입 필터 제외 (타입 필드 없음)');
+                  return false;
+                }
+                const matches = reservationType === apiType;
+                if (!matches) {
+                  console.log('[ReservationCalendar] 타입 필터 제외:', reservationType, '!==', apiType);
+                }
+                return matches;
+              });
+            } else {
+              // 타입 필드가 없는 경우 모든 예약 표시 (타입 필터 무시)
+              console.log('[ReservationCalendar] 타입 필드가 없어서 타입 필터 무시');
+            }
+            
+            console.log('[ReservationCalendar] 타입 필터링 후 개수:', filteredReservations.length, '(이전:', beforeTypeFilter, ')');
+          }
+        } else {
+          console.log('[ReservationCalendar] 타입 필터 미적용 (타입 미선택)');
+        }
+        
+        console.log('[ReservationCalendar] 최종 필터링된 예약 개수:', filteredReservations.length);
+        
+        reservations = filteredReservations.map((reservation, index) => {
+          console.log(`[ReservationCalendar] 예약 ${index + 1} 원본 데이터:`, reservation);
+          
+          // reservationPublicId 찾기 (reservationId 우선 확인 - 실제 데이터에 reservationId로 오는 경우)
+          const reservationId = reservation.reservationId ||
+                               reservation.reservationPublicId || 
+                               reservation.reservation_public_id || 
+                               reservation.reservation_id || 
+                               reservation.id;
+          
+          // 숫자일 경우 문자열로 변환
+          const reservationIdStr = reservationId ? String(reservationId) : null;
+          
+          const formatted = {
+            reservationPublicId: reservationIdStr,
+            name: reservation.username || reservation.name || reservation.nickname || reservation.userName || `예약자${index + 1}`,
             count: reservation.headCount || reservation.head_count || 0,
             status: getProcessStatusText(reservation.process),
-            process: reservation.process
-          }));
-        }
+            process: reservation.process,
+            phone: reservation.phone || reservation.phoneNumber || reservation.phone_number || '',
+            totalPrice: reservation.totalPrice || reservation.price || 0,
+            memo: reservation.request || reservation.memo || reservation.notification || reservation.description || '',
+            shipFishType: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || ''
+          };
+          
+          console.log(`[ReservationCalendar] 예약 ${index + 1} 포맷된 데이터:`, formatted);
+          return formatted;
+        });
+        
+        console.log('[ReservationCalendar] 최종 포맷된 예약 목록:', reservations);
+        console.log('[ReservationCalendar] 예약 목록 개수:', reservations.length);
         
         // 전체 예약 목록 저장
         setAllReservations(reservations);
         
-        // 스케줄 정보에서 상세 정보 가져오기
-        const schedulePublicId = dayData.schedulePublicId;
+        // schedulePublicId 찾기 - 예약 데이터에서 먼저 찾기
+        let foundSchedulePublicId = null;
+        
+        // 필터링된 예약 데이터에서 schedulePublicId 찾기
+        if (filteredReservations.length > 0) {
+          for (const reservation of filteredReservations) {
+            const scheduleId = reservation.schedulePublicId || 
+                              reservation.schedule_public_id ||
+                              reservation.schedule?.schedulePublicId ||
+                              reservation.schedule?.schedule_public_id;
+            if (scheduleId) {
+              foundSchedulePublicId = String(scheduleId);
+              console.log('[ReservationCalendar] 예약 데이터에서 schedulePublicId 발견:', foundSchedulePublicId);
+              break;
+            }
+          }
+        }
+        
+        // 예약 데이터에서 찾지 못한 경우 dayData에서 찾기
+        if (!foundSchedulePublicId) {
+          foundSchedulePublicId = dayData.schedulePublicId || 
+                                 dayData.scheduleData?.schedulePublicId;
+          if (foundSchedulePublicId) {
+            console.log('[ReservationCalendar] dayData에서 schedulePublicId 발견:', foundSchedulePublicId);
+          }
+        }
+        
+        // 여전히 없으면 /schedules/departure API로 다음 출항 스케줄 가져오기 (Home.jsx 방식)
         let scheduleDetail = null;
-        if (schedulePublicId) {
+        if (!foundSchedulePublicId) {
           try {
-            const scheduleResponse = await apiGet(`/schedules/${schedulePublicId}`);
+            console.log('[ReservationCalendar] /schedules/departure API로 schedulePublicId 조회 시도');
+            const departureResponse = await apiGet('/schedules/departure');
+            if (departureResponse.ok) {
+              const departureResult = await departureResponse.json();
+              if (departureResult.success && departureResult.data && departureResult.data.schedulePublicId) {
+                foundSchedulePublicId = departureResult.data.schedulePublicId;
+                console.log('[ReservationCalendar] /schedules/departure에서 schedulePublicId 발견:', foundSchedulePublicId);
+              }
+            }
+          } catch (error) {
+            console.error('[ReservationCalendar] /schedules/departure 조회 실패:', error);
+          }
+        }
+        
+        // schedulePublicId가 있으면 스케줄 상세 정보 가져오기
+        if (foundSchedulePublicId) {
+          try {
+            const scheduleResponse = await apiGet(`/schedules/${foundSchedulePublicId}`);
             if (scheduleResponse.ok) {
               const scheduleResult = await scheduleResponse.json();
               if (scheduleResult.success && scheduleResult.data) {
                 scheduleDetail = scheduleResult.data;
+                // scheduleDetail에서도 schedulePublicId 확인
+                if (scheduleDetail.schedule?.schedulePublicId && !foundSchedulePublicId) {
+                  foundSchedulePublicId = scheduleDetail.schedule.schedulePublicId;
+                }
               }
             }
           } catch (error) {
@@ -418,6 +615,11 @@ function ReservationCalendar() {
         const price = selectedBoatData?.price || scheduleDetail?.ship?.price || 90000;
         const notification = selectedBoatData?.notification || scheduleDetail?.ship?.notification || '쭈꾸미 위주의 낚시';
         
+        console.log('[ReservationCalendar] 설정할 예약 목록:', reservations);
+        console.log('[ReservationCalendar] 예약 목록 개수:', reservations.length);
+        console.log('[ReservationCalendar] 최종 schedulePublicId:', foundSchedulePublicId);
+        console.log('[ReservationCalendar] dayData:', dayData);
+        
         setSelectedDayReservations({
           date: `${month}월 ${dayData.date}일`,
           dayOfWeek: daysOfWeek[dayData.day],
@@ -426,9 +628,11 @@ function ReservationCalendar() {
           capacity: `${maxHeadCount}명`,
           desc: notification,
           reservations: reservations,
-          schedulePublicId: schedulePublicId,
+          schedulePublicId: foundSchedulePublicId,
           scheduleDetail: scheduleDetail
         });
+        
+        console.log('[ReservationCalendar] selectedDayReservations 설정 완료, 모달 표시');
         setShowReservationModal(true);
       } else {
         // 에러 응답의 본문 확인
@@ -529,6 +733,37 @@ function ReservationCalendar() {
     }
   };
   
+  // 예약 상세 정보 조회
+  const handleReservationClick = async (reservationPublicId) => {
+    if (!reservationPublicId) {
+      console.warn('[ReservationCalendar] reservationPublicId가 없습니다.');
+      return;
+    }
+
+    try {
+      console.log('[ReservationCalendar] 예약 상세 정보 조회:', reservationPublicId);
+      const response = await apiGet(`/reservations/${reservationPublicId}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ReservationCalendar] 예약 상세 정보 API 응답:', result);
+        
+        if (result.success && result.data) {
+          setSelectedReservationDetail(result.data);
+          setShowReservationDetailModal(true);
+        } else {
+          alert('예약 상세 정보를 불러올 수 없습니다.');
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        alert(`예약 상세 정보 조회 실패: ${errorData.message || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('[ReservationCalendar] 예약 상세 정보 조회 오류:', error);
+      alert('예약 상세 정보 조회 중 오류가 발생했습니다.');
+    }
+  };
+
   // 예약 상태 변경 처리
   const handleProcessChange = async (reservationPublicId, newProcess) => {
     try {
@@ -570,99 +805,211 @@ function ReservationCalendar() {
 
   // 출항 확정 API 호출 (Home.jsx와 동일)
   const handleConfirmDeparture = async () => {
+    console.log('[ReservationCalendar] 출항 확정 버튼 클릭');
     const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    console.log('[ReservationCalendar] schedulePublicId:', schedulePublicId);
+    console.log('[ReservationCalendar] selectedDayReservations:', selectedDayReservations);
+    
     if (!schedulePublicId) {
+      console.warn('[ReservationCalendar] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
-    try {
-      const response = await apiPost(
-        `/schedules/${schedulePublicId}/departure/confirmation`,
-        {
-          scheduleStatus: 'CONFIRMED',
-          content: '안녕하세요! 내일은 기상예보가 갱신되어 좋아졌기에 출항을 확정합니다. 출항시간은 6시10분입니다. 승선명부를 회신해주세요.'
-        }
-      );
+    // Home.jsx의 기본 출항 확정 메시지 템플릿
+    const confirmMessages = [
+      { id: 1, title: '출항확정 1', content: '안녕하세요! 내일은 기상예보가 갱신되어 좋아졌기에 출항을 확정합니다. 출항시간은 6시10분입니다. 승선명부를 회신해주세요.', selected: true }
+    ];
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '출항 확정 요청 실패');
+    const selectedMessages = confirmMessages.filter(sms => sms.selected);
+    console.log('[ReservationCalendar] 선택된 출항 확정 메시지 개수:', selectedMessages.length);
+    console.log('[ReservationCalendar] 선택된 출항 확정 메시지:', selectedMessages);
+    
+    if (selectedMessages.length === 0) {
+      console.warn('[ReservationCalendar] 체크된 메시지가 없습니다.');
+      alert('체크된 메시지를 선택해주세요.');
+      return;
+    }
+
+    try {
+      // 체크된 각 메시지에 대해 API 호출
+      for (const message of selectedMessages) {
+        const apiUrl = `/schedules/${schedulePublicId}/departure/confirmation`;
+        const requestBody = {
+          scheduleStatus: 'CONFIRMED',
+          content: message.content
+        };
+        
+        console.log('[ReservationCalendar] 출항 확정 API 요청 시작');
+        console.log('[ReservationCalendar] API URL:', apiUrl);
+        console.log('[ReservationCalendar] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[ReservationCalendar] 출항 확정 API 응답:', response);
+        console.log('[ReservationCalendar] 응답 상태:', response.status, response.statusText);
+        console.log('[ReservationCalendar] 응답 OK:', response.ok);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[ReservationCalendar] 출항 확정 API 오류 응답:', errorData);
+          throw new Error(errorData.message || '출항 확정 요청 실패');
+        }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[ReservationCalendar] 출항 확정 API 성공 응답:', responseData);
       }
 
-      alert('출항 확정 메시지가 전송되었습니다.');
+      console.log('[ReservationCalendar] 출항 확정 메시지 전송 완료:', selectedMessages.length, '개');
+      alert(`${selectedMessages.length}개의 출항 확정 메시지가 전송되었습니다.`);
       // 예약 정보 다시 불러오기
       if (selectedSchedule) {
         handleDayClick(selectedSchedule);
       }
     } catch (error) {
-      console.error('출항 확정 요청 실패:', error);
+      console.error('[ReservationCalendar] 출항 확정 요청 실패:', error);
+      console.error('[ReservationCalendar] 에러 상세:', error.message, error.stack);
       alert(`출항 확정 요청 실패: ${error.message}`);
     }
   };
 
   // 출항 보류 API 호출 (Home.jsx와 동일)
   const handlePendingDeparture = async () => {
+    console.log('[ReservationCalendar] 출항 보류 버튼 클릭');
     const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    console.log('[ReservationCalendar] schedulePublicId:', schedulePublicId);
+    console.log('[ReservationCalendar] selectedDayReservations:', selectedDayReservations);
+    
     if (!schedulePublicId) {
+      console.warn('[ReservationCalendar] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
-    try {
-      const response = await apiPost(
-        `/schedules/${schedulePublicId}/departure/delay`,
-        {
-          scheduleStatus: 'DELAYED',
-          content: '안녕하세요, 라마르호입니다. 내일은 기상악화 예보가 있어서 오늘 오후 2~3시까지 대기 후 기상예보가 갱신되면 출항여부를 안내드리겠습니다.'
-        }
-      );
+    // Home.jsx의 기본 출항 보류 메시지 템플릿
+    const pendingMessages = [
+      { id: 1, title: '출항보류 1', content: '안녕하세요, 라마르호입니다. 내일은 기상악화 예보가 있어서 오늘 오후 2~3시까지 대기 후 기상예보가 갱신되면 출항여부를 안내드리겠습니다.', selected: true },
+      { id: 2, title: '출항보류 2', content: '안녕하세요, 라마르호입니다. 내일은 기상악화 예보가 있어서 오늘 오후 2~3시까지 대기 후 기상예보가 갱신되면 출항여부를 안내드리겠습니다. 혹시 멀미나 건강이 좋지 않은 분들은 오늘 오전11시까지 취소 신청해주시면 환불해드리겠습니다. 감사합니다.', selected: false }
+    ];
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '출항 연기 요청 실패');
+    const selectedMessages = pendingMessages.filter(sms => sms.selected);
+    console.log('[ReservationCalendar] 선택된 출항 보류 메시지 개수:', selectedMessages.length);
+    console.log('[ReservationCalendar] 선택된 출항 보류 메시지:', selectedMessages);
+    
+    if (selectedMessages.length === 0) {
+      console.warn('[ReservationCalendar] 체크된 메시지가 없습니다.');
+      alert('체크된 메시지를 선택해주세요.');
+      return;
+    }
+
+    try {
+      // 체크된 각 메시지에 대해 API 호출
+      for (const message of selectedMessages) {
+        const apiUrl = `/schedules/${schedulePublicId}/departure/delay`;
+        const requestBody = {
+          scheduleStatus: 'DELAYED',
+          content: message.content
+        };
+        
+        console.log('[ReservationCalendar] 출항 보류 API 요청 시작');
+        console.log('[ReservationCalendar] API URL:', apiUrl);
+        console.log('[ReservationCalendar] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[ReservationCalendar] 출항 보류 API 응답:', response);
+        console.log('[ReservationCalendar] 응답 상태:', response.status, response.statusText);
+        console.log('[ReservationCalendar] 응답 OK:', response.ok);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[ReservationCalendar] 출항 보류 API 오류 응답:', errorData);
+          throw new Error(errorData.message || '출항 연기 요청 실패');
+        }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[ReservationCalendar] 출항 보류 API 성공 응답:', responseData);
       }
 
-      alert('출항 연기 메시지가 전송되었습니다.');
+      console.log('[ReservationCalendar] 출항 보류 메시지 전송 완료:', selectedMessages.length, '개');
+      alert(`${selectedMessages.length}개의 출항 연기 메시지가 전송되었습니다.`);
       // 예약 정보 다시 불러오기
       if (selectedSchedule) {
         handleDayClick(selectedSchedule);
       }
     } catch (error) {
-      console.error('출항 연기 요청 실패:', error);
+      console.error('[ReservationCalendar] 출항 연기 요청 실패:', error);
+      console.error('[ReservationCalendar] 에러 상세:', error.message, error.stack);
       alert(`출항 연기 요청 실패: ${error.message}`);
     }
   };
 
   // 출항 취소 API 호출 (Home.jsx와 동일)
   const handleCancelDeparture = async () => {
+    console.log('[ReservationCalendar] 출항 취소 버튼 클릭');
     const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    console.log('[ReservationCalendar] schedulePublicId:', schedulePublicId);
+    console.log('[ReservationCalendar] selectedDayReservations:', selectedDayReservations);
+    
     if (!schedulePublicId) {
+      console.warn('[ReservationCalendar] schedulePublicId가 없습니다.');
       alert('출항 스케줄 정보가 없습니다.');
       return;
     }
 
-    try {
-      const response = await apiPost(
-        `/schedules/${schedulePublicId}/departure/cancel`,
-        {
-          scheduleStatus: 'CANCELED',
-          content: '안녕하세요, 라마르호입니다. 내일은 아쉽게도 기상악화로 인해 출항이 취소되었습니다. 환불계좌를 회신해주세요. 다음에 더 좋은날 뵙겠습니다.'
-        }
-      );
+    // Home.jsx의 기본 출항 취소 메시지 템플릿
+    const cancelMessages = [
+      { id: 1, title: '출항취소 1', content: '안녕하세요, 라마르호입니다. 내일은 아쉽게도 기상악화로 인해 출항이 취소되었습니다. 환불계좌를 회신해주세요. 다음에 더 좋은날 뵙겠습니다.', selected: true }
+    ];
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '출항 취소 요청 실패');
+    const selectedMessages = cancelMessages.filter(sms => sms.selected);
+    console.log('[ReservationCalendar] 선택된 출항 취소 메시지 개수:', selectedMessages.length);
+    console.log('[ReservationCalendar] 선택된 출항 취소 메시지:', selectedMessages);
+    
+    if (selectedMessages.length === 0) {
+      console.warn('[ReservationCalendar] 체크된 메시지가 없습니다.');
+      alert('체크된 메시지를 선택해주세요.');
+      return;
+    }
+
+    try {
+      // 체크된 각 메시지에 대해 API 호출
+      for (const message of selectedMessages) {
+        const apiUrl = `/schedules/${schedulePublicId}/departure/cancel`;
+        const requestBody = {
+          scheduleStatus: 'CANCELED',
+          content: message.content
+        };
+        
+        console.log('[ReservationCalendar] 출항 취소 API 요청 시작');
+        console.log('[ReservationCalendar] API URL:', apiUrl);
+        console.log('[ReservationCalendar] 요청 본문:', requestBody);
+        
+        const response = await apiPost(apiUrl, requestBody);
+        
+        console.log('[ReservationCalendar] 출항 취소 API 응답:', response);
+        console.log('[ReservationCalendar] 응답 상태:', response.status, response.statusText);
+        console.log('[ReservationCalendar] 응답 OK:', response.ok);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[ReservationCalendar] 출항 취소 API 오류 응답:', errorData);
+          throw new Error(errorData.message || '출항 취소 요청 실패');
+        }
+        
+        const responseData = await response.json().catch(() => ({}));
+        console.log('[ReservationCalendar] 출항 취소 API 성공 응답:', responseData);
       }
 
-      alert('출항 취소 메시지가 전송되었습니다.');
+      console.log('[ReservationCalendar] 출항 취소 메시지 전송 완료:', selectedMessages.length, '개');
+      alert(`${selectedMessages.length}개의 출항 취소 메시지가 전송되었습니다.`);
       // 예약 정보 다시 불러오기
       if (selectedSchedule) {
         handleDayClick(selectedSchedule);
       }
     } catch (error) {
-      console.error('출항 취소 요청 실패:', error);
+      console.error('[ReservationCalendar] 출항 취소 요청 실패:', error);
+      console.error('[ReservationCalendar] 에러 상세:', error.message, error.stack);
       alert(`출항 취소 요청 실패: ${error.message}`);
     }
   };
@@ -1157,15 +1504,20 @@ function ReservationCalendar() {
                   </tr>
                 </thead>
                 <tbody>
-                  {selectedDayReservations.reservations.length === 0 ? (
+                  {!selectedDayReservations.reservations || selectedDayReservations.reservations.length === 0 ? (
                     <tr>
                       <td colSpan="3" className="py-[30px] text-center text-[#73757C] font-pretendard text-[16px]">
                         예약 정보가 없습니다.
                       </td>
                     </tr>
                   ) : (
-                    selectedDayReservations.reservations.map((reservation, idx) => (
-                      <tr key={idx} className="border-b border-[#E7E7E7]">
+                    selectedDayReservations.reservations.map((reservation, idx) => {
+                      console.log('[ReservationCalendar] 렌더링할 예약:', reservation);
+                      return (
+                      <tr 
+                        key={idx} 
+                        className="border-b border-[#E7E7E7]"
+                      >
                         <td className="py-[15px] px-[10px] text-left text-[#272C3C] font-pretendard text-[16px]">
                           {reservation.name}
                         </td>
@@ -1185,7 +1537,8 @@ function ReservationCalendar() {
                           </span>
                         </td>
                       </tr>
-                    ))
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -1195,6 +1548,161 @@ function ReservationCalendar() {
             <div className="flex justify-center mt-[30px]">
               <button 
                 onClick={handleCloseModal}
+                className="px-[40px] py-[12px] bg-[#EEF4FF] text-[#2754DA] rounded-[10px] font-medium hover:bg-[#DFE7F4]"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 예약 상세 정보 모달 */}
+      {showReservationDetailModal && selectedReservationDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-[20px] p-[40px] w-[800px] max-h-[90vh] overflow-y-auto">
+            {/* 헤더 */}
+            <div className="flex justify-between items-start mb-[20px]">
+              <h2 className="text-[#272C3C] font-pretendard text-[28px] font-bold">
+                예약 상세 정보
+              </h2>
+              <button 
+                onClick={() => {
+                  setShowReservationDetailModal(false);
+                  setSelectedReservationDetail(null);
+                }}
+                className="text-[#272C3C] text-[24px] font-bold hover:text-[#2754DA]"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* 예약 상세 정보 */}
+            <div className="flex flex-col gap-[20px]">
+              {/* 예약자 정보 */}
+              <div className="border-b border-[#E7E7E7] pb-[15px]">
+                <h3 className="text-[#272C3C] font-pretendard text-[20px] font-bold mb-[10px]">예약자 정보</h3>
+                <div className="grid grid-cols-2 gap-[15px]">
+                  <div>
+                    <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">이름</p>
+                    <p className="text-[#272C3C] font-pretendard text-[16px]">
+                      {selectedReservationDetail.reservation?.username || selectedReservationDetail.reservation?.name || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">닉네임</p>
+                    <p className="text-[#272C3C] font-pretendard text-[16px]">
+                      {selectedReservationDetail.reservation?.nickname || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">연락처</p>
+                    <p className="text-[#272C3C] font-pretendard text-[16px]">
+                      {selectedReservationDetail.reservation?.phone || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">예약 인원</p>
+                    <p className="text-[#272C3C] font-pretendard text-[16px]">
+                      {selectedReservationDetail.reservation?.headCount || 0}명
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 배 정보 */}
+              {selectedReservationDetail.ship && (
+                <div className="border-b border-[#E7E7E7] pb-[15px]">
+                  <h3 className="text-[#272C3C] font-pretendard text-[20px] font-bold mb-[10px]">배 정보</h3>
+                  <div className="grid grid-cols-2 gap-[15px]">
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">어종</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.ship.fishType || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">안내사항</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.ship.notification || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 스케줄 정보 */}
+              {selectedReservationDetail.schedule && (
+                <div className="border-b border-[#E7E7E7] pb-[15px]">
+                  <h3 className="text-[#272C3C] font-pretendard text-[20px] font-bold mb-[10px]">스케줄 정보</h3>
+                  <div className="grid grid-cols-2 gap-[15px]">
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">출항일</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.schedule.departure || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">요일</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.schedule.dayOfWeek || 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">물때</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.schedule.tide ? `${selectedReservationDetail.schedule.tide}물` : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 예약 정보 */}
+              {selectedReservationDetail.reservation && (
+                <div className="border-b border-[#E7E7E7] pb-[15px]">
+                  <h3 className="text-[#272C3C] font-pretendard text-[20px] font-bold mb-[10px]">예약 정보</h3>
+                  <div className="grid grid-cols-2 gap-[15px]">
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">총 금액</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {selectedReservationDetail.reservation.totalPrice ? `${selectedReservationDetail.reservation.totalPrice.toLocaleString()}원` : 'N/A'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">예약 상태</p>
+                      <p className="text-[#272C3C] font-pretendard text-[16px]">
+                        {getProcessStatusText(selectedReservationDetail.reservation.process)}
+                      </p>
+                    </div>
+                    {selectedReservationDetail.reservation.request && (
+                      <div className="col-span-2">
+                        <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">요청사항</p>
+                        <p className="text-[#272C3C] font-pretendard text-[16px]">
+                          {selectedReservationDetail.reservation.request}
+                        </p>
+                      </div>
+                    )}
+                    {selectedReservationDetail.reservation.couponId && (
+                      <div>
+                        <p className="text-[#73757C] font-pretendard text-[14px] mb-[5px]">쿠폰 ID</p>
+                        <p className="text-[#272C3C] font-pretendard text-[16px]">
+                          {selectedReservationDetail.reservation.couponId}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 닫기 버튼 */}
+            <div className="flex justify-center mt-[30px]">
+              <button 
+                onClick={() => {
+                  setShowReservationDetailModal(false);
+                  setSelectedReservationDetail(null);
+                }}
                 className="px-[40px] py-[12px] bg-[#EEF4FF] text-[#2754DA] rounded-[10px] font-medium hover:bg-[#DFE7F4]"
               >
                 닫기
