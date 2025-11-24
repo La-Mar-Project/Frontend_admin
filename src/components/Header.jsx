@@ -43,7 +43,7 @@ function Header() {
           onClick={handleHomepage}
           className="h-[36px] px-[20px] py-[4px] rounded-[20px] font-medium leading-normal text-[20px] text-[#2754da] cursor-pointer hover:opacity-80"
         >
-          홈페이지 바로가기
+          예약자페이지 바로가기
         </button>
         <button 
           onClick={handleLogout}

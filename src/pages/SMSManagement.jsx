@@ -117,7 +117,7 @@ function SMSManagement() {
                     <div className="flex-1 font-normal text-[18px] leading-[27px] text-justify whitespace-pre-line" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
                       [입금확인 안내문자]
 
-안녕하세요 쭈불 낚시입니다.
+안녕하세요 쭈불 낚시입니다. 
 25.10.30(목) 쭈갑 예약 접수 확인 안내 문자
 드립니다. 아래의 출항 시간을 잘 확인하시어
 당일 출조에 차질 없도록 도와주시면 감사하
@@ -130,9 +130,9 @@ function SMSManagement() {
 쭈불 블로그: (대충주소)
 쭈불 소개: (주소)
                     </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
               {/* 세 번째 행 */}
               <div className="flex items-start gap-[30px]">
@@ -196,15 +196,15 @@ function SMSManagement() {
             <div className="flex items-center self-stretch" style={{ paddingLeft: '122px' }}>
               <div className="flex items-start gap-[30px]">
                 {/* 예약접수 안내 */}
-                <div className="flex flex-col items-start w-[380px]" style={{ aspectRatio: '380/280' }}>
-                  <div className="flex items-center justify-center gap-[10px] w-[380px] px-[20px] py-[18px] rounded-t-[10px] border-2" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#F7F8FC' }}>
-                    <div className="font-medium text-[22px] leading-normal whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
-                      예약접수 안내
+                  <div className="flex flex-col items-start w-[380px]" style={{ aspectRatio: '380/280' }}>
+                    <div className="flex items-center justify-center gap-[10px] w-[380px] px-[20px] py-[18px] rounded-t-[10px] border-2" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#F7F8FC' }}>
+                      <div className="font-medium text-[22px] leading-normal whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
+                        예약접수 안내
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-[10px] self-stretch px-[35px] py-[20px] rounded-b-[10px] border-2 flex-1" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#FFF' }}>
+                    <div className="flex items-center justify-center gap-[10px] self-stretch px-[35px] py-[20px] rounded-b-[10px] border-2 flex-1" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#FFF' }}>
                     <div className="flex-1 font-normal text-[18px] leading-[27px] text-justify whitespace-pre-line" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
-                      [예약접수]
+                        [예약접수]
 새로운 예약이 접수되었습니다.
 
 출항일: 25.09.17(수) 3물 쭈갑
@@ -212,20 +212,20 @@ function SMSManagement() {
 닉네임: 쭈불종윤
 예약인원: 1명
 입금금액: 90,000원
+                      </div>
                     </div>
                   </div>
-                </div>
 
                 {/* 취소접수 안내 */}
-                <div className="flex flex-col items-start w-[380px]" style={{ aspectRatio: '380/280' }}>
-                  <div className="flex items-center justify-center gap-[10px] w-[380px] px-[20px] py-[18px] rounded-t-[10px] border-2" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#F7F8FC' }}>
-                    <div className="font-medium text-[22px] leading-normal whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
-                      취소접수 안내
+                  <div className="flex flex-col items-start w-[380px]" style={{ aspectRatio: '380/280' }}>
+                    <div className="flex items-center justify-center gap-[10px] w-[380px] px-[20px] py-[18px] rounded-t-[10px] border-2" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#F7F8FC' }}>
+                      <div className="font-medium text-[22px] leading-normal whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
+                        취소접수 안내
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-center gap-[10px] self-stretch px-[35px] py-[20px] rounded-b-[10px] border-2 flex-1" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#FFF' }}>
+                    <div className="flex items-center justify-center gap-[10px] self-stretch px-[35px] py-[20px] rounded-b-[10px] border-2 flex-1" style={{ borderColor: 'rgba(223, 231, 244, 1)', background: '#FFF' }}>
                     <div className="flex-1 font-normal text-[18px] leading-[27px] text-justify whitespace-pre-line" style={{ color: '#272C3C', fontFamily: 'Pretendard' }}>
-                      [취소접수]
+                        [취소접수]
 새로운 취소가 접수되었습니다.
 
 출항일: 25.09.17(수) 3물 쭈갑

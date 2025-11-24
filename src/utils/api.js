@@ -38,7 +38,8 @@ export const apiRequest = async (endpoint, options = {}) => {
   };
 
   // 토큰이 있으면 Authorization 헤더 추가 (localStorage에서 가져오기)
-  const token = localStorage.getItem('token');
+  // adminToken 또는 token 둘 다 확인
+  const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
@@ -56,6 +57,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     console.log('[API Request] 실제 요청 URL:', url);
     console.log('[API Request] 요청 설정:', config);
     console.log('[API Request] API_BASE_URL:', API_BASE_URL);
+    console.log('[API Request] Authorization 헤더:', token ? 'Bearer ' + token.substring(0, 20) + '...' : '없음');
     
     const response = await fetch(url, config);
     console.log('[API Response]', {

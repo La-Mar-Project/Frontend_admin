@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { apiGet, apiPatch } from '../utils/api';
+import { apiGet, apiPatch, apiPost } from '../utils/api';
 
 function ReservationCalendar() {
-  const [year, setYear] = useState(2025);
-  const [month, setMonth] = useState(9);
+  const today = new Date();
+  const [year, setYear] = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth() + 1);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedType, setSelectedType] = useState('');
@@ -19,58 +20,8 @@ function ReservationCalendar() {
   const [reservationFilters, setReservationFilters] = useState([]); // CONFIRMED, DELAYED, CANCELLED 중복 선택 가능
   const [isHoliday, setIsHoliday] = useState(false);
   const [allReservations, setAllReservations] = useState([]); // 전체 예약 목록 저장
-
-  // Calendar data - this would come from an API in a real application
-  const calendarData = {
-    2025: {
-      9: [
-        // Week 1
-        { date: '8/31', day: 0, tide: '1물', type: '쭈갑', price: '90,000원', desc: '쭈꾸미 위주의 낚시', status: 'closed', remaining: 0, prevMonth: true },
-        { date: 1, day: 1, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 2, day: 2, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 3, day: 3, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 4, day: 4, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 5, day: 5, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 6, day: 6, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        
-        // Week 2
-        { date: 7, day: 0, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 8, day: 1, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 9, day: 2, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 10, day: 3, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 11, day: 4, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 12, day: 5, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 13, day: 6, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        
-        // Week 3
-        { date: 14, day: 0, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 15, day: 1, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 16, day: 2, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 17, day: 3, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 18, day: 4, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 19, day: 5, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 20, day: 6, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        
-        // Week 4
-        { date: 21, day: 0, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 22, day: 1, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 23, day: 2, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 24, day: 3, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 25, day: 4, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 26, day: 5, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 27, day: 6, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        
-        // Week 5
-        { date: 28, day: 0, tide: '1물', type: '쭈갑', price: '90,000원', desc: '', status: 'closed', remaining: 0 },
-        { date: 29, day: 1, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: 30, day: 2, tide: '2물', type: '쭈갑', price: '90,000원', desc: '', status: 'available', remaining: 17 },
-        { date: '10/1', day: 3, tide: '1물', type: '쭈갑', price: '90,000원', desc: '쭈꾸미 위주의 낚시', status: 'closed', remaining: 0, nextMonth: true },
-        { date: '10/2', day: 4, tide: '1물', type: '쭈갑', price: '90,000원', desc: '쭈꾸미 위주의 낚시', status: 'closed', remaining: 0, nextMonth: true },
-        { date: '10/3', day: 5, tide: '1물', type: '쭈갑', price: '90,000원', desc: '쭈꾸미 위주의 낚시', status: 'closed', remaining: 0, nextMonth: true },
-        { date: '10/4', day: 6, tide: '1물', type: '쭈갑', price: '90,000원', desc: '쭈꾸미 위주의 낚시', status: 'closed', remaining: 0, nextMonth: true },
-      ]
-    }
-  };
+  const [calendarData, setCalendarData] = useState([]); // 실제 API에서 가져온 달력 데이터
+  const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
 
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -109,6 +60,209 @@ function ReservationCalendar() {
     };
     fetchBoats();
   }, []);
+
+  // 해당 월의 스케줄 데이터 불러오기
+  useEffect(() => {
+    const fetchCalendarData = async () => {
+      setIsLoadingCalendar(true);
+      try {
+        // 해당 월의 시작일과 종료일 계산
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        
+        // ISO 형식으로 변환 (from: 해당 월 1일 00:00:00, to: 해당 월 마지막일 23:59:59)
+        const fromDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+        
+        console.log('[ReservationCalendar] 스케줄 조회:', { from: fromDate, to: toDate });
+        
+        // /reservations API를 사용하여 예약 정보 기반으로 달력 구성
+        let schedules = [];
+        let reservations = [];
+        
+        // 예약 정보 가져오기 (파라미터 없이 전체 조회 후 클라이언트에서 필터링)
+        try {
+          const reservationsResponse = await apiGet('/reservations');
+          
+          if (reservationsResponse.ok) {
+            const reservationsResult = await reservationsResponse.json();
+            console.log('[ReservationCalendar] 예약 목록 API 응답:', reservationsResult);
+            
+            if (reservationsResult.success && reservationsResult.data) {
+              const allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : 
+                           (reservationsResult.data.content ? reservationsResult.data.content : []);
+              
+              // 해당 월의 예약만 필터링
+              reservations = allReservations.filter(reservation => {
+                const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+                if (!reservationDate) return false;
+                const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
+                return dateKey >= fromDate && dateKey <= toDate;
+              });
+              
+              // 예약 정보에서 날짜별로 그룹화하여 스케줄 정보 생성
+              const scheduleMap = new Map();
+              reservations.forEach(reservation => {
+                const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+                if (reservationDate) {
+                  const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
+                  if (!scheduleMap.has(dateKey)) {
+                    scheduleMap.set(dateKey, {
+                      departure: reservationDate,
+                      date: dateKey,
+                      ship: reservation.ship || {},
+                      fishType: reservation.ship?.fishType || reservation.fishType || '쭈갑',
+                      price: reservation.ship?.price || reservation.price || 90000,
+                      maxHeadCount: reservation.ship?.maxHeadCount || 18,
+                      tide: 1, // 기본값
+                      schedulePublicId: reservation.schedulePublicId || reservation.schedule_public_id
+                    });
+                  }
+                }
+              });
+              schedules = Array.from(scheduleMap.values());
+            }
+          } else {
+            // 에러 응답의 본문 확인
+            let errorMessage = `HTTP ${reservationsResponse.status}`;
+            try {
+              const errorData = await reservationsResponse.json();
+              console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 본문:', errorData);
+              errorMessage = errorData.message || errorData.error || errorMessage;
+            } catch (e) {
+              const errorText = await reservationsResponse.text();
+              console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
+            }
+            console.warn('[ReservationCalendar] 예약 목록 조회 실패:', reservationsResponse.status, errorMessage);
+            // 에러가 발생해도 빈 배열로 설정하여 달력이 깨지지 않도록 함
+            reservations = [];
+            schedules = [];
+          }
+        } catch (error) {
+          console.error('[ReservationCalendar] 예약 목록 조회 중 예외 발생:', error);
+          // 에러가 발생해도 빈 배열로 설정하여 달력이 깨지지 않도록 함
+          reservations = [];
+          schedules = [];
+        }
+          
+        // 달력 데이터 생성
+        const calendarDays = generateCalendarDays(year, month);
+        const monthData = calendarDays.map((day, index) => {
+          // 날짜 객체 생성 (요일 계산용)
+          const dayDate = new Date(day.year, day.month - 1, day.date);
+          const dayOfWeek = dayDate.getDay();
+          
+          // 해당 날짜의 스케줄 찾기
+          const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+          const schedule = schedules.find(s => {
+            // API 응답 구조: departure 필드 사용
+            const scheduleDate = s.departure || s.departureDate || s.date || s.scheduleDate;
+            if (!scheduleDate) return false;
+            // ISO 형식인 경우
+            if (scheduleDate.includes('T')) {
+              return scheduleDate.startsWith(dateStr);
+            }
+            // 날짜만 있는 경우
+            return scheduleDate.startsWith(dateStr);
+          });
+          
+          // 해당 날짜의 예약 정보 찾기
+          const dayReservations = reservations.filter(r => {
+            const reservationDate = r.departureDate || r.date || r.scheduleDate;
+            if (!reservationDate) return false;
+            if (reservationDate.includes('T')) {
+              return reservationDate.startsWith(dateStr);
+            }
+            return reservationDate.startsWith(dateStr);
+          });
+          
+          // 예약 인원 합계 계산
+          const totalReserved = dayReservations.reduce((sum, r) => {
+            const process = r.process;
+            // 취소 완료가 아닌 예약만 계산
+            if (process !== 'CANCEL_COMPLETED') {
+              return sum + (r.headCount || r.head_count || 0);
+            }
+            return sum;
+          }, 0);
+          
+          if (schedule) {
+            // API 응답 구조에 맞게 데이터 추출
+            const fishType = schedule.fishType || '쭈갑';
+            const price = schedule.price || schedule.shipPrice || 0;
+            const maxHeadCount = schedule.maxHeadCount || schedule.ship?.maxHeadCount || 18;
+            const remainingHeadCount = schedule.remainingHeadCount !== undefined ? schedule.remainingHeadCount : 
+                                      (schedule.remainHeadCount !== undefined ? schedule.remainHeadCount : 
+                                      Math.max(0, maxHeadCount - totalReserved));
+            const tideNumber = schedule.tide || 1;
+            const tide = tideNumber === 1 ? '1물' : tideNumber === 2 ? '2물' : `${tideNumber}물`;
+            
+            // 배 정보에서 추가 정보 가져오기 (있는 경우)
+            const ship = schedule.ship || {};
+            const notification = ship.notification || schedule.notification || '쭈꾸미 위주의 낚시';
+            
+            return {
+              date: day.isPrevMonth ? `${day.month}/${day.date}` : 
+                    day.isNextMonth ? `${day.month}/${day.date}` : day.date,
+              day: dayOfWeek,
+              tide: tide,
+              type: fishType,
+              price: price ? `${price.toLocaleString()}원` : '90,000원',
+              desc: notification,
+              status: remainingHeadCount > 0 ? 'available' : 'closed',
+              remaining: remainingHeadCount,
+              prevMonth: day.isPrevMonth,
+              nextMonth: day.isNextMonth,
+              schedulePublicId: schedule.schedulePublicId || schedule.id,
+              scheduleData: schedule
+            };
+          } else {
+            // 스케줄이 없는 날짜
+            return {
+              date: day.isPrevMonth ? `${day.month}/${day.date}` : 
+                    day.isNextMonth ? `${day.month}/${day.date}` : day.date,
+              day: dayOfWeek,
+              tide: '',
+              type: '',
+              price: '',
+              desc: '',
+              status: 'closed',
+              remaining: 0,
+              prevMonth: day.isPrevMonth,
+              nextMonth: day.isNextMonth
+            };
+          }
+        });
+        
+        setCalendarData(monthData);
+      } catch (error) {
+        console.error('[ReservationCalendar] 스케줄 데이터 불러오기 실패:', error);
+        // 에러 시 빈 달력 데이터 생성
+        const calendarDays = generateCalendarDays(year, month);
+        const monthData = calendarDays.map((day) => {
+          const dayDate = new Date(day.year, day.month - 1, day.date);
+          return {
+            date: day.isPrevMonth ? `${day.month}/${day.date}` : 
+                  day.isNextMonth ? `${day.month}/${day.date}` : day.date,
+            day: dayDate.getDay(),
+            tide: '',
+            type: '',
+            price: '',
+            desc: '',
+            status: 'closed',
+            remaining: 0,
+            prevMonth: day.isPrevMonth,
+            nextMonth: day.isNextMonth
+          };
+        });
+        setCalendarData(monthData);
+      } finally {
+        setIsLoadingCalendar(false);
+      }
+    };
+    
+    fetchCalendarData();
+  }, [year, month]);
 
   // 캘린더 생성 함수
   const generateCalendarDays = (year, month) => {
@@ -191,7 +345,7 @@ function ReservationCalendar() {
       const searchDate = `${year}-${String(month).padStart(2, '0')}-${String(dayData.date).padStart(2, '0')}`;
       console.log('[ReservationCalendar] 예약 조회 날짜:', searchDate);
       
-      // /reservations API로 전체 예약 목록 가져오기 (date 파라미터 미지원)
+      // 예약 정보 가져오기 (파라미터 없이 전체 조회 후 클라이언트에서 필터링)
       const response = await apiGet('/reservations');
       
       if (response.ok) {
@@ -200,51 +354,106 @@ function ReservationCalendar() {
         
         let reservations = [];
         if (result.success && result.data) {
-          // API 응답 데이터 변환 및 날짜 필터링
+          // API 응답 데이터 변환 및 필터링
           const allReservationsData = Array.isArray(result.data) ? result.data : 
                                   (result.data.content ? result.data.content : []);
           
-          reservations = allReservationsData
-            .filter(reservation => {
-              // 예약 날짜가 선택한 날짜와 일치하는지 확인
-              // API 응답 구조에 따라 날짜 필드명이 다를 수 있음
-              const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
-              return reservationDate && reservationDate.startsWith(searchDate);
-            })
-            .map(reservation => ({
-              reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
-              name: reservation.name || reservation.username || '예약자',
-              count: reservation.headCount || reservation.head_count || 0,
-              status: getProcessStatusText(reservation.process),
-              process: reservation.process
-            }));
+          // 클릭한 날짜의 예약만 필터링
+          const filteredReservations = allReservationsData.filter(reservation => {
+            const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+            if (!reservationDate) return false;
+            const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
+            if (dateKey !== searchDate) return false;
+            
+            // 배 필터 적용
+            if (selectedBoat) {
+              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
+              if (String(reservationShipId) !== String(selectedBoat)) return false;
+            }
+            
+            // 타입 필터 적용
+            if (selectedType) {
+              const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
+              const apiType = typeMap[selectedType];
+              const reservationType = reservation.type || reservation.reservationType;
+              if (apiType && reservationType !== apiType) return false;
+            }
+            
+            return true;
+          });
+          
+          reservations = filteredReservations.map(reservation => ({
+            reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
+            name: reservation.name || reservation.username || reservation.nickname || '예약자',
+            count: reservation.headCount || reservation.head_count || 0,
+            status: getProcessStatusText(reservation.process),
+            process: reservation.process
+          }));
         }
         
         // 전체 예약 목록 저장
         setAllReservations(reservations);
         
+        // 스케줄 정보에서 상세 정보 가져오기
+        const schedulePublicId = dayData.schedulePublicId;
+        let scheduleDetail = null;
+        if (schedulePublicId) {
+          try {
+            const scheduleResponse = await apiGet(`/schedules/${schedulePublicId}`);
+            if (scheduleResponse.ok) {
+              const scheduleResult = await scheduleResponse.json();
+              if (scheduleResult.success && scheduleResult.data) {
+                scheduleDetail = scheduleResult.data;
+              }
+            }
+          } catch (error) {
+            console.error('[ReservationCalendar] 스케줄 상세 조회 실패:', error);
+          }
+        }
+        
+        // 배 정보 가져오기
+        const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
+        const maxHeadCount = selectedBoatData?.maxHeadCount || scheduleDetail?.ship?.maxHeadCount || 18;
+        const fishType = selectedBoatData?.fishType || scheduleDetail?.ship?.fishType || dayData.type || '쭈갑';
+        const price = selectedBoatData?.price || scheduleDetail?.ship?.price || 90000;
+        const notification = selectedBoatData?.notification || scheduleDetail?.ship?.notification || '쭈꾸미 위주의 낚시';
+        
         setSelectedDayReservations({
           date: `${month}월 ${dayData.date}일`,
           dayOfWeek: daysOfWeek[dayData.day],
-          type: dayData.type,
-          price: dayData.price,
-          capacity: '18명',
-          desc: dayData.desc || '쭈꾸미 위주의 낚시',
-          reservations: reservations
+          type: fishType,
+          price: `${price.toLocaleString()}원`,
+          capacity: `${maxHeadCount}명`,
+          desc: notification,
+          reservations: reservations,
+          schedulePublicId: schedulePublicId,
+          scheduleDetail: scheduleDetail
         });
         setShowReservationModal(true);
       } else {
-        console.error('[ReservationCalendar] 예약 목록 조회 실패:', response.status);
+        // 에러 응답의 본문 확인
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 본문:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          const errorText = await response.text();
+          console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
+        }
+        console.error('[ReservationCalendar] 예약 목록 조회 실패:', response.status, errorMessage);
         // 실패 시 빈 예약 목록으로 표시
         setAllReservations([]);
+        const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
         setSelectedDayReservations({
           date: `${month}월 ${dayData.date}일`,
           dayOfWeek: daysOfWeek[dayData.day],
-          type: dayData.type,
-          price: dayData.price,
-          capacity: '18명',
-          desc: dayData.desc || '쭈꾸미 위주의 낚시',
-          reservations: []
+          type: selectedBoatData?.fishType || dayData.type || '쭈갑',
+          price: selectedBoatData?.price ? `${selectedBoatData.price.toLocaleString()}원` : dayData.price || '90,000원',
+          capacity: `${selectedBoatData?.maxHeadCount || 18}명`,
+          desc: selectedBoatData?.notification || dayData.desc || '쭈꾸미 위주의 낚시',
+          reservations: [],
+          schedulePublicId: dayData.schedulePublicId
         });
         setShowReservationModal(true);
       }
@@ -252,14 +461,16 @@ function ReservationCalendar() {
       console.error('[ReservationCalendar] 예약 정보 가져오기 오류:', error);
       // 에러 시 빈 예약 리스트로 모달 표시
       setAllReservations([]);
+      const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
       setSelectedDayReservations({
         date: `${month}월 ${dayData.date}일`,
         dayOfWeek: daysOfWeek[dayData.day],
-        type: dayData.type,
-        price: dayData.price,
-        capacity: '18명',
-        desc: dayData.desc || '쭈꾸미 위주의 낚시',
-        reservations: []
+        type: selectedBoatData?.fishType || dayData.type || '쭈갑',
+        price: selectedBoatData?.price ? `${selectedBoatData.price.toLocaleString()}원` : dayData.price || '90,000원',
+        capacity: `${selectedBoatData?.maxHeadCount || 18}명`,
+        desc: selectedBoatData?.notification || dayData.desc || '쭈꾸미 위주의 낚시',
+        reservations: [],
+        schedulePublicId: dayData.schedulePublicId
       });
       setShowReservationModal(true);
     }
@@ -357,6 +568,105 @@ function ReservationCalendar() {
     setReservationFilters([]);
   };
 
+  // 출항 확정 API 호출 (Home.jsx와 동일)
+  const handleConfirmDeparture = async () => {
+    const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    if (!schedulePublicId) {
+      alert('출항 스케줄 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const response = await apiPost(
+        `/schedules/${schedulePublicId}/departure/confirmation`,
+        {
+          scheduleStatus: 'CONFIRMED',
+          content: '안녕하세요! 내일은 기상예보가 갱신되어 좋아졌기에 출항을 확정합니다. 출항시간은 6시10분입니다. 승선명부를 회신해주세요.'
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '출항 확정 요청 실패');
+      }
+
+      alert('출항 확정 메시지가 전송되었습니다.');
+      // 예약 정보 다시 불러오기
+      if (selectedSchedule) {
+        handleDayClick(selectedSchedule);
+      }
+    } catch (error) {
+      console.error('출항 확정 요청 실패:', error);
+      alert(`출항 확정 요청 실패: ${error.message}`);
+    }
+  };
+
+  // 출항 보류 API 호출 (Home.jsx와 동일)
+  const handlePendingDeparture = async () => {
+    const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    if (!schedulePublicId) {
+      alert('출항 스케줄 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const response = await apiPost(
+        `/schedules/${schedulePublicId}/departure/delay`,
+        {
+          scheduleStatus: 'DELAYED',
+          content: '안녕하세요, 라마르호입니다. 내일은 기상악화 예보가 있어서 오늘 오후 2~3시까지 대기 후 기상예보가 갱신되면 출항여부를 안내드리겠습니다.'
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '출항 연기 요청 실패');
+      }
+
+      alert('출항 연기 메시지가 전송되었습니다.');
+      // 예약 정보 다시 불러오기
+      if (selectedSchedule) {
+        handleDayClick(selectedSchedule);
+      }
+    } catch (error) {
+      console.error('출항 연기 요청 실패:', error);
+      alert(`출항 연기 요청 실패: ${error.message}`);
+    }
+  };
+
+  // 출항 취소 API 호출 (Home.jsx와 동일)
+  const handleCancelDeparture = async () => {
+    const schedulePublicId = selectedDayReservations?.schedulePublicId;
+    if (!schedulePublicId) {
+      alert('출항 스케줄 정보가 없습니다.');
+      return;
+    }
+
+    try {
+      const response = await apiPost(
+        `/schedules/${schedulePublicId}/departure/cancel`,
+        {
+          scheduleStatus: 'CANCELED',
+          content: '안녕하세요, 라마르호입니다. 내일은 아쉽게도 기상악화로 인해 출항이 취소되었습니다. 환불계좌를 회신해주세요. 다음에 더 좋은날 뵙겠습니다.'
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '출항 취소 요청 실패');
+      }
+
+      alert('출항 취소 메시지가 전송되었습니다.');
+      // 예약 정보 다시 불러오기
+      if (selectedSchedule) {
+        handleDayClick(selectedSchedule);
+      }
+    } catch (error) {
+      console.error('출항 취소 요청 실패:', error);
+      alert(`출항 취소 요청 실패: ${error.message}`);
+    }
+  };
+
   const handlePrevYear = () => setYear(year - 1);
   const handleNextYear = () => setYear(year + 1);
   const handlePrevMonth = () => {
@@ -376,12 +686,10 @@ function ReservationCalendar() {
     }
   };
 
-  const currentMonthData = calendarData[year]?.[month] || [];
-  
   // Split data into weeks
   const weeks = [];
-  for (let i = 0; i < currentMonthData.length; i += 7) {
-    weeks.push(currentMonthData.slice(i, i + 7));
+  for (let i = 0; i < calendarData.length; i += 7) {
+    weeks.push(calendarData.slice(i, i + 7));
   }
 
   const renderDayCell = (dayData) => {
@@ -735,15 +1043,29 @@ function ReservationCalendar() {
             </div>
 
             {/* Calendar weeks */}
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex items-center self-stretch">
-                {week.map((dayData, dayIndex) => (
-                  <div key={dayIndex}>
-                    {renderDayCell(dayData)}
-                  </div>
-                ))}
+            {isLoadingCalendar ? (
+              <div className="flex items-center justify-center w-full py-[100px]">
+                <span className="text-[18px] text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                  달력 데이터를 불러오는 중...
+                </span>
               </div>
-            ))}
+            ) : weeks.length === 0 ? (
+              <div className="flex items-center justify-center w-full py-[100px]">
+                <span className="text-[18px] text-[#73757C]" style={{ fontFamily: 'Pretendard' }}>
+                  달력 데이터가 없습니다.
+                </span>
+              </div>
+            ) : (
+              weeks.map((week, weekIndex) => (
+                <div key={weekIndex} className="flex items-center self-stretch">
+                  {week.map((dayData, dayIndex) => (
+                    <div key={dayIndex}>
+                      {renderDayCell(dayData)}
+                    </div>
+                  ))}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -793,35 +1115,26 @@ function ReservationCalendar() {
               </button>
             </div>
 
-            {/* 출항 필터 버튼들 (중복 선택 가능) */}
+            {/* 출항 관련 버튼들 */}
             <div className="flex gap-[10px] mb-[30px]">
               <button 
-                onClick={() => handleFilterToggle('CONFIRMED')}
-                className={`px-[20px] py-[12px] rounded-[10px] font-medium transition-colors ${
-                  reservationFilters.includes('CONFIRMED')
-                    ? 'bg-[#E0E0E0] text-[#272C3C] border-2 border-[#272C3C]' 
-                    : 'bg-[#F5F5F5] text-[#5A5A5A] hover:bg-[#E8E8E8]'
-                }`}
+                onClick={handleConfirmDeparture}
+                className="px-[20px] py-[12px] rounded-[10px] font-medium bg-[#EEF4FF] text-[#2754DA] hover:bg-[#DFE7F4] transition-colors"
+                style={{ fontFamily: 'Pretendard' }}
               >
                 출항확정
               </button>
               <button 
-                onClick={() => handleFilterToggle('DELAYED')}
-                className={`px-[20px] py-[12px] rounded-[10px] font-medium transition-colors ${
-                  reservationFilters.includes('DELAYED')
-                    ? 'bg-[#E0E0E0] text-[#272C3C] border-2 border-[#272C3C]' 
-                    : 'bg-[#F5F5F5] text-[#5A5A5A] hover:bg-[#E8E8E8]'
-                }`}
+                onClick={handlePendingDeparture}
+                className="px-[20px] py-[12px] rounded-[10px] font-medium bg-[#EEF4FF] text-[#2754DA] hover:bg-[#DFE7F4] transition-colors"
+                style={{ fontFamily: 'Pretendard' }}
               >
                 출항보류
               </button>
               <button 
-                onClick={() => handleFilterToggle('CANCELLED')}
-                className={`px-[20px] py-[12px] rounded-[10px] font-medium transition-colors ${
-                  reservationFilters.includes('CANCELLED')
-                    ? 'bg-[#E0E0E0] text-[#272C3C] border-2 border-[#272C3C]' 
-                    : 'bg-[#F5F5F5] text-[#5A5A5A] hover:bg-[#E8E8E8]'
-                }`}
+                onClick={handleCancelDeparture}
+                className="px-[20px] py-[12px] rounded-[10px] font-medium bg-[#EEF4FF] text-[#2754DA] hover:bg-[#DFE7F4] transition-colors"
+                style={{ fontFamily: 'Pretendard' }}
               >
                 출항취소
               </button>
@@ -863,6 +1176,7 @@ function ReservationCalendar() {
                           <span className={`font-pretendard text-[16px] ${
                             reservation.status === '예약접수' ? 'text-[#FFA500]' : 
                             reservation.status === '입금확인' ? 'text-[#272C3C]' :
+                            reservation.status === '입금완료' ? 'text-[#272C3C]' :
                             reservation.status === '취소접수' ? 'text-[#ED2626]' :
                             reservation.status === '취소완료' ? 'text-[#73757C]' :
                             'text-[#272C3C]'

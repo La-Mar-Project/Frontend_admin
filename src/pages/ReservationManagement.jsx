@@ -62,6 +62,7 @@ function ReservationManagement() {
     setLoading(true);
     try {
       const response = await apiGet('/reservations');
+      
       if (response.ok) {
         const result = await response.json();
         console.log('[ReservationManagement] 예약 목록 API 응답:', result);
@@ -88,12 +89,29 @@ function ReservationManagement() {
           }));
           
           setReservations(formattedReservations);
+        } else {
+          // 데이터가 없거나 형식이 다른 경우 빈 배열 설정
+          setReservations([]);
         }
       } else {
-        console.error('[ReservationManagement] 예약 목록 조회 실패:', response.status);
+        // 에러 응답의 본문 확인
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('[ReservationManagement] 예약 목록 조회 실패 - 응답 본문:', errorData);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          const errorText = await response.text();
+          console.error('[ReservationManagement] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
+        }
+        console.error('[ReservationManagement] 예약 목록 조회 실패:', response.status, errorMessage);
+        // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록 함
+        setReservations([]);
       }
     } catch (error) {
       console.error('[ReservationManagement] 예약 목록 조회 오류:', error);
+      // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록 함
+      setReservations([]);
     } finally {
       setLoading(false);
     }
@@ -194,33 +212,53 @@ function ReservationManagement() {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      let queryParams = [];
-      
-      if (startDate) {
-        queryParams.push(`startDate=${startDate}`);
-      }
-      if (endDate) {
-        queryParams.push(`endDate=${endDate}`);
-      }
-      if (selectedBoat) {
-        queryParams.push(`shipId=${selectedBoat}`);
-      }
-      if (selectedType) {
-        queryParams.push(`type=${selectedType}`);
-      }
-      
-      const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
-      const response = await apiGet(`/reservations${queryString}`);
+      // 전체 예약 목록 가져오기 (파라미터 없이)
+      const response = await apiGet('/reservations');
       
       if (response.ok) {
         const result = await response.json();
         console.log('[ReservationManagement] 검색 결과:', result);
         
         if (result.success && result.data) {
-          const reservationsData = Array.isArray(result.data) ? result.data : 
+          const allReservationsData = Array.isArray(result.data) ? result.data : 
                                  (result.data.content ? result.data.content : []);
           
-          const formattedReservations = reservationsData.map((reservation) => ({
+          // 클라이언트에서 필터링
+          let filteredReservations = allReservationsData;
+          
+          // 날짜 필터
+          if (startDate || endDate) {
+            filteredReservations = filteredReservations.filter(reservation => {
+              const reservationDate = reservation.departureDate || reservation.date || reservation.scheduleDate;
+              if (!reservationDate) return false;
+              const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
+              if (startDate && dateKey < startDate) return false;
+              if (endDate && dateKey > endDate) return false;
+              return true;
+            });
+          }
+          
+          // 배 필터
+          if (selectedBoat) {
+            filteredReservations = filteredReservations.filter(reservation => {
+              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
+              return String(reservationShipId) === String(selectedBoat);
+            });
+          }
+          
+          // 타입 필터
+          if (selectedType) {
+            const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
+            const apiType = typeMap[selectedType];
+            if (apiType) {
+              filteredReservations = filteredReservations.filter(reservation => {
+                const reservationType = reservation.type || reservation.reservationType;
+                return reservationType === apiType;
+              });
+            }
+          }
+          
+          const formattedReservations = filteredReservations.map((reservation) => ({
             id: reservation.reservationPublicId || reservation.reservation_public_id || reservation.id,
             reservationPublicId: reservation.reservationPublicId || reservation.reservation_public_id,
             date: formatDate(reservation.departureDate || reservation.date || reservation.scheduleDate),
@@ -436,15 +474,15 @@ function ReservationManagement() {
                         </button>
                       </div>
                     )}
-                  </div>
-                  
+              </div>
+
                   {/* 타입 선택 (날짜 오른쪽) */}
                   <div className="flex items-start gap-[10px] relative">
-                    <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
-                      <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
-                        타입
-                      </span>
-                    </div>
+                <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
+                  <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
+                    타입
+                  </span>
+                </div>
                     <div className="flex items-center gap-[5px] h-[37px] relative">
                       <div 
                         className="flex items-center justify-between px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px] cursor-pointer"
@@ -456,10 +494,10 @@ function ReservationManagement() {
                       >
                         <span className={`text-[16px] font-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
                           {selectedType || '타입 선택'}
-                        </span>
+                    </span>
                         <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
+                    </svg>
                       </div>
                       {showTypeDropdown && (
                         <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
@@ -614,65 +652,65 @@ function ReservationManagement() {
                   </div>
                 ) : (
                   reservations.map((row) => (
-                    <div key={row.id} className="flex items-center self-stretch">
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] w-[66px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <div className="flex items-center gap-[10px] p-[10px]">
-                          <svg 
-                            width="44" 
-                            height="44" 
-                            viewBox="0 0 44 44" 
-                            fill="none" 
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="cursor-pointer"
-                            onClick={() => handleRowSelect(row.id)}
-                          >
-                            <path 
-                              d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
+                  <div key={row.id} className="flex items-center self-stretch">
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] w-[66px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <div className="flex items-center gap-[10px] p-[10px]">
+                        <svg 
+                          width="44" 
+                          height="44" 
+                          viewBox="0 0 44 44" 
+                          fill="none" 
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="cursor-pointer"
+                          onClick={() => handleRowSelect(row.id)}
+                        >
+                          <path 
+                            d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
                               fill={selectedRows.has(row.id) ? '#1840B8' : 'white'}
-                              stroke="#1840B8"
-                            />
+                            stroke="#1840B8"
+                          />
                             {selectedRows.has(row.id) && (
                               <path d="M19 22L22 25L27 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                             )}
-                          </svg>
-                        </div>
+                        </svg>
                       </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {row.date}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                        {row.date}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
                           {`${row.name}(${row.headCount}) ${row.phone}`}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {row.boat}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {row.amount}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {row.memo}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
-                          {row.status}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                        <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {row.payment}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                        {row.boat}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                        {row.amount}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                        {row.memo}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
+                        {row.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                        {row.payment}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[48px] border-2 border-[#DFE7F4] bg-white">
                         <svg 
                           width="52" 
                           height="50" 
@@ -682,12 +720,12 @@ function ReservationManagement() {
                           className="cursor-pointer"
                           onClick={() => row.reservationPublicId && handleCouponClick(row.reservationPublicId, row.coupon)}
                         >
-                          <rect x="1" y="1" width="50" height="48" fill="white"/>
-                          <rect x="1" y="1" width="50" height="48" stroke="#DFE7F4" strokeWidth="2"/>
-                          <circle cx="26" cy="25" r="8.5" fill={row.coupon ? '#2754DA' : '#D9D9D9'}/>
-                        </svg>
-                      </div>
+                        <rect x="1" y="1" width="50" height="48" fill="white"/>
+                        <rect x="1" y="1" width="50" height="48" stroke="#DFE7F4" strokeWidth="2"/>
+                        <circle cx="26" cy="25" r="8.5" fill={row.coupon ? '#2754DA' : '#D9D9D9'}/>
+                      </svg>
                     </div>
+                  </div>
                   ))
                 )}
               </div>

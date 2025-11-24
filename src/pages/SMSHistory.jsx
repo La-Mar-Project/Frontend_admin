@@ -279,50 +279,50 @@ function SMSHistory() {
                   ) : (
                     smsHistoryData.map((row, index) => (
                       <div key={row.id || index} className="flex items-center">
-                        <div className="flex w-[66px] h-[48px] px-[20px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
-                          <div className="flex p-[10px] items-center gap-[10px]">
-                            <svg 
-                              width="24" 
-                              height="24" 
-                              viewBox="0 0 44 44" 
-                              fill="none" 
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="cursor-pointer"
-                              onClick={() => toggleRow(row.id)}
-                            >
+                      <div className="flex w-[66px] h-[48px] px-[20px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
+                        <div className="flex p-[10px] items-center gap-[10px]">
+                          <svg 
+                            width="24" 
+                            height="24" 
+                            viewBox="0 0 44 44" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="cursor-pointer"
+                            onClick={() => toggleRow(row.id)}
+                          >
+                            <path 
+                              d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
+                              fill={selectedRows.includes(row.id) ? "#1840B8" : "white"}
+                              stroke="#1840B8"
+                            />
+                            {selectedRows.includes(row.id) && (
                               <path 
-                                d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
-                                fill={selectedRows.includes(row.id) ? "#1840B8" : "white"}
-                                stroke="#1840B8"
+                                d="M18 22L21 25L26 19" 
+                                stroke="white" 
+                                strokeWidth="2" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round"
                               />
-                              {selectedRows.includes(row.id) && (
-                                <path 
-                                  d="M18 22L21 25L26 19" 
-                                  stroke="white" 
-                                  strokeWidth="2" 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round"
-                                />
-                              )}
-                            </svg>
-                          </div>
+                            )}
+                          </svg>
                         </div>
-                        <div className="flex w-[66px] h-[48px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
+                      </div>
+                      <div className="flex w-[66px] h-[48px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{index + 1}</span>
-                        </div>
-                        <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      </div>
+                      <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.smsType || 'N/A'}</span>
-                        </div>
-                        <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      </div>
+                      <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.contact || 'N/A'}</span>
-                        </div>
-                        <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      </div>
+                      <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.phone || 'N/A'}</span>
-                        </div>
-                        <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      </div>
+                      <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.sendTime || 'N/A'}</span>
-                        </div>
-                        <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      </div>
+                      <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.status || 'N/A'}</span>
                         </div>
                       </div>
