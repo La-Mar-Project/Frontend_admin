@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { apiGet, apiPatch, apiPost } from '../utils/api';
+import { apiGet, apiPatch, apiPost, apiDelete } from '../utils/api';
 
 function ReservationCalendar() {
   const today = new Date();
@@ -72,101 +72,95 @@ function ReservationCalendar() {
         const firstDay = new Date(year, month - 1, 1);
         const lastDay = new Date(year, month, 0);
         
-        // ISO 형식으로 변환 (from: 해당 월 1일 00:00:00, to: 해당 월 마지막일 23:59:59)
-        const fromDate = `${year}-${String(month).padStart(2, '0')}-01`;
-        const toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+        // ISO 타임스탬프 형식으로 변환 (from: 해당 월 1일 00:00:00, to: 해당 월 마지막일 23:59:59)
+        const fromDate = `${year}-${String(month).padStart(2, '0')}-01T00:00:00`;
+        const toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}T23:59:59`;
         
         console.log('[ReservationCalendar] 스케줄 조회:', { from: fromDate, to: toDate });
         
-        // /reservations API를 사용하여 예약 정보 기반으로 달력 구성
+        // /schedules/main API를 사용하여 달력 데이터 가져오기
         let schedules = [];
-        let reservations = [];
         
-        // 예약 정보 가져오기 (파라미터 없이 전체 조회 후 클라이언트에서 필터링)
         try {
-          const reservationsResponse = await apiGet('/reservations');
+          // /schedules/main API 호출 (from, to 파라미터 사용 - ISO 타임스탬프 형식)
+          const mainResponse = await apiGet(`/schedules/main?from=${encodeURIComponent(fromDate)}&to=${encodeURIComponent(toDate)}`);
           
-          if (reservationsResponse.ok) {
-            const reservationsResult = await reservationsResponse.json();
-            console.log('[ReservationCalendar] 예약 목록 API 응답 (전체):', reservationsResult);
-            console.log('[ReservationCalendar] 예약 목록 API 응답 타입:', typeof reservationsResult);
-            console.log('[ReservationCalendar] 예약 목록 API 응답이 배열인가?', Array.isArray(reservationsResult));
+          if (mainResponse.ok) {
+            const mainResult = await mainResponse.json();
+            console.log('[ReservationCalendar] /schedules/main API 응답:', mainResult);
+            console.log('[ReservationCalendar] /schedules/main API 응답 타입:', typeof mainResult);
+            console.log('[ReservationCalendar] /schedules/main API 응답이 배열인가?', Array.isArray(mainResult));
+            console.log('[ReservationCalendar] mainResult.data:', mainResult.data);
+            console.log('[ReservationCalendar] mainResult.data?.content:', mainResult.data?.content);
+            console.log('[ReservationCalendar] mainResult.data?.content 타입:', typeof mainResult.data?.content);
+            console.log('[ReservationCalendar] mainResult.data?.content이 배열인가?', Array.isArray(mainResult.data?.content));
             
             // API 응답이 배열인지 객체인지 확인
-            let allReservations = [];
-            
-            if (Array.isArray(reservationsResult)) {
-              // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
-              allReservations = reservationsResult;
-              console.log('[ReservationCalendar] 배열 형태 응답, 데이터 개수:', allReservations.length);
-            } else if (reservationsResult.success && reservationsResult.data) {
+            if (Array.isArray(mainResult)) {
+              // 응답이 배열인 경우
+              schedules = mainResult;
+              console.log('[ReservationCalendar] 배열 형태 응답, 스케줄 개수:', schedules.length);
+            } else if (mainResult.success && mainResult.data) {
               // 응답이 객체이고 success/data 구조인 경우
-              allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : 
-                           (reservationsResult.data.content ? reservationsResult.data.content : []);
-              console.log('[ReservationCalendar] 객체 형태 응답, 데이터 개수:', allReservations.length);
-            } else if (reservationsResult.data) {
+              // 실제 API 응답: data.schedules에 배열이 있음
+              if (Array.isArray(mainResult.data)) {
+                schedules = mainResult.data;
+                console.log('[ReservationCalendar] data가 배열인 경우, 스케줄 개수:', schedules.length);
+              } else if (mainResult.data.schedules && Array.isArray(mainResult.data.schedules)) {
+                schedules = mainResult.data.schedules;
+                console.log('[ReservationCalendar] data.schedules가 배열인 경우, 스케줄 개수:', schedules.length);
+              } else if (mainResult.data.content && Array.isArray(mainResult.data.content)) {
+                schedules = mainResult.data.content;
+                console.log('[ReservationCalendar] data.content가 배열인 경우, 스케줄 개수:', schedules.length);
+              } else {
+                schedules = [];
+                console.log('[ReservationCalendar] data 구조를 찾을 수 없음, data:', mainResult.data);
+              }
+            } else if (mainResult.data) {
               // data 필드만 있는 경우
-              allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : [];
-              console.log('[ReservationCalendar] data 필드만 있는 응답, 데이터 개수:', allReservations.length);
+              if (Array.isArray(mainResult.data)) {
+                schedules = mainResult.data;
+              } else if (mainResult.data.schedules && Array.isArray(mainResult.data.schedules)) {
+                schedules = mainResult.data.schedules;
+              } else if (mainResult.data.content && Array.isArray(mainResult.data.content)) {
+                schedules = mainResult.data.content;
+              } else {
+                schedules = [];
+              }
+              console.log('[ReservationCalendar] data 필드만 있는 응답, 스케줄 개수:', schedules.length);
+            } else {
+              schedules = [];
+              console.log('[ReservationCalendar] 응답 구조를 파악할 수 없음');
             }
             
-            if (allReservations.length > 0) {
-              
-              // 해당 월의 예약만 필터링
-              reservations = allReservations.filter(reservation => {
-                const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
-                if (!reservationDate) return false;
-                const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
-                return dateKey >= fromDate && dateKey <= toDate;
-              });
-              
-              // 예약 정보에서 날짜별로 그룹화하여 스케줄 정보 생성
-              const scheduleMap = new Map();
-              reservations.forEach(reservation => {
-                const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
-                if (reservationDate) {
-                  const dateKey = reservationDate.split('T')[0]; // 날짜만 추출
-                  if (!scheduleMap.has(dateKey)) {
-                    scheduleMap.set(dateKey, {
-                      departure: reservationDate,
-                      date: dateKey,
-                      ship: reservation.ship || {},
-                      fishType: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || '쭈갑',
-                      price: reservation.totalPrice || reservation.ship?.price || reservation.price || 90000,
-                      maxHeadCount: reservation.ship?.maxHeadCount || 18,
-                      tide: 1, // 기본값
-                      schedulePublicId: reservation.schedulePublicId || reservation.schedule_public_id
-                    });
-                  }
-                }
-              });
-              schedules = Array.from(scheduleMap.values());
-            }
+            console.log('[ReservationCalendar] 생성된 스케줄 개수:', schedules.length);
+            console.log('[ReservationCalendar] 생성된 스케줄:', schedules);
           } else {
             // 에러 응답의 본문 확인
-            let errorMessage = `HTTP ${reservationsResponse.status}`;
+            let errorMessage = `HTTP ${mainResponse.status}`;
             try {
-              const errorData = await reservationsResponse.json();
-              console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 본문:', errorData);
+              const errorData = await mainResponse.json();
+              console.error('[ReservationCalendar] /schedules/main API 조회 실패 - 응답 본문:', errorData);
               errorMessage = errorData.message || errorData.error || errorMessage;
             } catch (e) {
-              const errorText = await reservationsResponse.text();
-              console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
+              const errorText = await mainResponse.text();
+              console.error('[ReservationCalendar] /schedules/main API 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
             }
-            console.warn('[ReservationCalendar] 예약 목록 조회 실패:', reservationsResponse.status, errorMessage);
+            console.warn('[ReservationCalendar] /schedules/main API 조회 실패:', mainResponse.status, errorMessage);
             // 에러가 발생해도 빈 배열로 설정하여 달력이 깨지지 않도록 함
-            reservations = [];
             schedules = [];
           }
         } catch (error) {
-          console.error('[ReservationCalendar] 예약 목록 조회 중 예외 발생:', error);
+          console.error('[ReservationCalendar] /schedules/main API 조회 중 예외 발생:', error);
           // 에러가 발생해도 빈 배열로 설정하여 달력이 깨지지 않도록 함
-          reservations = [];
           schedules = [];
         }
           
         // 달력 데이터 생성
         const calendarDays = generateCalendarDays(year, month);
+        console.log('[ReservationCalendar] 생성된 캘린더 날짜 개수:', calendarDays.length);
+        console.log('[ReservationCalendar] 스케줄 개수:', schedules.length);
+        
         const monthData = calendarDays.map((day, index) => {
           // 날짜 객체 생성 (요일 계산용)
           const dayDate = new Date(day.year, day.month - 1, day.date);
@@ -175,8 +169,8 @@ function ReservationCalendar() {
           // 해당 날짜의 스케줄 찾기
           const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
           const schedule = schedules.find(s => {
-            // API 응답 구조: departure 필드 사용
-            const scheduleDate = s.departure || s.departureDate || s.date || s.scheduleDate;
+            // /main API 응답 구조: departure 필드 사용
+            const scheduleDate = s.departure;
             if (!scheduleDate) return false;
             // ISO 형식인 경우
             if (scheduleDate.includes('T')) {
@@ -186,44 +180,25 @@ function ReservationCalendar() {
             return scheduleDate.startsWith(dateStr);
           });
           
-          // 해당 날짜의 예약 정보 찾기
-          const dayReservations = reservations.filter(r => {
-            const reservationDate = r.departureDate || r.date || r.scheduleDate;
-            if (!reservationDate) return false;
-            if (reservationDate.includes('T')) {
-              return reservationDate.startsWith(dateStr);
-            }
-            return reservationDate.startsWith(dateStr);
-          });
-          
-          // 예약 인원 합계 계산
-          const totalReserved = dayReservations.reduce((sum, r) => {
-            const process = r.process;
-            // 취소 완료가 아닌 예약만 계산
-            if (process !== 'CANCEL_COMPLETED') {
-              return sum + (r.headCount || r.head_count || 0);
-            }
-            return sum;
-          }, 0);
-          
           if (schedule) {
-            // API 응답 구조에 맞게 데이터 추출
-            const fishType = schedule.fishType || '쭈갑';
-            const price = schedule.price || schedule.shipPrice || 0;
-            const maxHeadCount = schedule.maxHeadCount || schedule.ship?.maxHeadCount || 18;
-            const remainingHeadCount = schedule.remainingHeadCount !== undefined ? schedule.remainingHeadCount : 
-                                      (schedule.remainHeadCount !== undefined ? schedule.remainHeadCount : 
-                                      Math.max(0, maxHeadCount - totalReserved));
+            // /schedules/main API 응답 구조에 맞게 데이터 추출
+            const fishType = schedule.fishType || schedule.ship?.fishType || '쭈갑';
+            const price = schedule.price || schedule.ship?.price || 90000;
+            const remainingHeadCount = schedule.remainingHeadCount !== undefined ? schedule.remainingHeadCount : 0;
             const tideNumber = schedule.tide || 1;
             const tide = tideNumber === 1 ? '1물' : tideNumber === 2 ? '2물' : `${tideNumber}물`;
             
-            // 배 정보에서 추가 정보 가져오기 (있는 경우)
-            const ship = schedule.ship || {};
-            const notification = ship.notification || schedule.notification || '쭈꾸미 위주의 낚시';
+            // schedulePublicId는 schedulePublicId 필드에서 가져오기
+            const schedulePublicId = schedule.schedulePublicId || (schedule.id ? String(schedule.id) : null);
+            
+            // 배 정보에서 notification 가져오기
+            const notification = schedule.ship?.notification || schedule.notification || '쭈꾸미 위주의 낚시';
             
             return {
               date: day.isPrevMonth ? `${day.month}/${day.date}` : 
                     day.isNextMonth ? `${day.month}/${day.date}` : day.date,
+              year: day.year,
+              month: day.month,
               day: dayOfWeek,
               tide: tide,
               type: fishType,
@@ -233,7 +208,7 @@ function ReservationCalendar() {
               remaining: remainingHeadCount,
               prevMonth: day.isPrevMonth,
               nextMonth: day.isNextMonth,
-              schedulePublicId: schedule.schedulePublicId || schedule.id,
+              schedulePublicId: schedulePublicId,
               scheduleData: schedule
             };
           } else {
@@ -241,6 +216,8 @@ function ReservationCalendar() {
             return {
               date: day.isPrevMonth ? `${day.month}/${day.date}` : 
                     day.isNextMonth ? `${day.month}/${day.date}` : day.date,
+              year: day.year,
+              month: day.month,
               day: dayOfWeek,
               tide: '',
               type: '',
@@ -254,6 +231,8 @@ function ReservationCalendar() {
           }
         });
         
+        console.log('[ReservationCalendar] 생성된 달력 데이터 개수:', monthData.length);
+        console.log('[ReservationCalendar] 달력 데이터 샘플 (첫 3개):', monthData.slice(0, 3));
         setCalendarData(monthData);
       } catch (error) {
         console.error('[ReservationCalendar] 스케줄 데이터 불러오기 실패:', error);
@@ -345,9 +324,13 @@ function ReservationCalendar() {
   const handleDayClick = async (dayData) => {
     if (!dayData || dayData.prevMonth || dayData.nextMonth) return;
     
-    // 배를 선택하지 않으면 아무런 반응 없음
-    if (!selectedBoat) {
-      alert('배를 먼저 선택해주세요.');
+    // 달력에 스케줄 데이터가 없으면 아무 반응 없음
+    // schedulePublicId가 없거나, 스케줄 정보가 없으면 early return
+    let schedulePublicId = dayData.schedulePublicId || dayData.scheduleData?.schedulePublicId || dayData.scheduleData?.id;
+    
+    // 스케줄 데이터가 없으면 아무 반응 없음
+    if (!schedulePublicId) {
+      console.log('[ReservationCalendar] 해당 날짜에 스케줄 데이터가 없습니다. 아무 반응 없음.');
       return;
     }
     
@@ -360,275 +343,95 @@ function ReservationCalendar() {
     // 해당 날짜의 공휴일 상태 확인 (임시로 false, 실제로는 API에서 가져와야 함)
     setIsHoliday(false);
     
-    // 예약 정보 가져오기
+    // 스케줄 상세 정보 가져오기
     try {
-      // dayData.date가 문자열일 수 있으므로 숫자로 변환
+      // dayData에서 year, month, date 추출
+      const dayYear = dayData.year || year;
+      const dayMonth = dayData.month || month;
       const dayNumber = typeof dayData.date === 'string' ? parseInt(dayData.date.replace(/[^0-9]/g, '')) : dayData.date;
-      const searchDate = `${year}-${String(month).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-      console.log('[ReservationCalendar] 예약 조회 날짜:', searchDate);
+      console.log('[ReservationCalendar] 날짜 클릭:', { dayYear, dayMonth, dayNumber });
       console.log('[ReservationCalendar] dayData:', dayData);
       
-      // 예약 정보 가져오기 (파라미터 없이 전체 조회 후 클라이언트에서 필터링)
-      const response = await apiGet('/reservations');
+      // 숫자일 경우 문자열로 변환
+      schedulePublicId = String(schedulePublicId);
+      console.log('[ReservationCalendar] schedulePublicId:', schedulePublicId);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[ReservationCalendar] 예약 목록 API 응답:', result);
+      // 숫자일 경우 문자열로 변환
+      schedulePublicId = String(schedulePublicId);
+      console.log('[ReservationCalendar] schedulePublicId:', schedulePublicId);
+      
+      // /schedules/{schedulePublicId} API로 스케줄 상세 정보 가져오기
+      const scheduleResponse = await apiGet(`/schedules/${schedulePublicId}`);
+      
+      if (scheduleResponse.ok) {
+        const scheduleResult = await scheduleResponse.json();
+        console.log('[ReservationCalendar] 스케줄 상세 API 응답:', scheduleResult);
         
+        let scheduleDetail = null;
         let reservations = [];
         
-        // API 응답이 배열인지 객체인지 확인
-        let allReservationsData = [];
-        
-        if (Array.isArray(result)) {
-          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
-          allReservationsData = result;
-        } else if (result.success && result.data) {
-          // 응답이 객체이고 success/data 구조인 경우
-          allReservationsData = Array.isArray(result.data) ? result.data : 
-                              (result.data.content ? result.data.content : []);
-        } else if (result.data) {
-          // data 필드만 있는 경우
-          allReservationsData = Array.isArray(result.data) ? result.data : [];
-        }
-        
-        console.log('[ReservationCalendar] 처리할 예약 데이터:', allReservationsData);
-        console.log('[ReservationCalendar] 첫 번째 예약 데이터 구조:', allReservationsData[0]);
-        
-        // 클릭한 날짜의 예약만 필터링
-        let filteredReservations = allReservationsData;
-        
-        // 날짜 필터링 - 날짜 필드 확인 및 필터링
-        const reservationsWithDate = allReservationsData.filter(r => {
-          const date = r.scheduleDeparture || r.departureDate || r.date || r.scheduleDate || r.schedule?.departure;
-          return date;
-        });
-        
-        console.log('[ReservationCalendar] 날짜가 있는 예약 개수:', reservationsWithDate.length);
-        console.log('[ReservationCalendar] 검색 날짜:', searchDate);
-        
-        if (reservationsWithDate.length > 0) {
-          // 날짜가 있는 예약만 날짜 필터링 적용
-          filteredReservations = allReservationsData.filter(reservation => {
-            const reservationDate = reservation.scheduleDeparture || 
-                                   reservation.departureDate || 
-                                   reservation.date || 
-                                   reservation.scheduleDate ||
-                                   reservation.schedule?.departure;
-            
-            if (!reservationDate) {
-              // 날짜가 없으면 일단 포함 (나중에 배/타입 필터로 걸러질 수 있음)
-              return true;
-            }
-            
-            const dateKey = reservationDate.split('T')[0];
-            const matches = dateKey === searchDate;
-            console.log('[ReservationCalendar] 날짜 비교:', dateKey, '===', searchDate, '?', matches);
-            return matches;
-          });
-        } else {
-          // 날짜가 없는 경우 모든 예약 표시 (배/타입 필터만 적용)
-          console.log('[ReservationCalendar] 날짜 정보가 없어서 모든 예약 표시');
-        }
-        
-        console.log('[ReservationCalendar] 날짜 필터링 후 개수:', filteredReservations.length);
-        
-        // 배 필터 적용 (배 ID가 있는 예약만 필터링)
-        if (selectedBoat) {
-          const beforeBoatFilter = filteredReservations.length;
-          console.log('[ReservationCalendar] 배 필터 적용 - 선택된 배 ID:', selectedBoat);
+        // API 응답 구조 확인
+        if (scheduleResult.success && scheduleResult.data) {
+          scheduleDetail = scheduleResult.data;
           
-          // 배 ID가 있는 예약이 있는지 확인
-          const hasShipId = filteredReservations.some(r => r.ship?.shipId || r.shipId);
-          
-          if (hasShipId) {
-            // 배 ID가 있는 경우만 필터링
-            filteredReservations = filteredReservations.filter(reservation => {
-              const reservationShipId = reservation.ship?.shipId || reservation.shipId;
-              console.log('[ReservationCalendar] 예약의 배 ID:', reservationShipId, '타입:', typeof reservationShipId, '선택된 배:', selectedBoat, '타입:', typeof selectedBoat);
+          // 예약 목록 추출
+          if (scheduleDetail.reservations && Array.isArray(scheduleDetail.reservations)) {
+            reservations = scheduleDetail.reservations.map((reservation, index) => {
+              const reservationId = reservation.reservationPublicId || 
+                                   reservation.reservation_public_id || 
+                                   reservation.reservation_id || 
+                                   reservation.id;
+              const reservationIdStr = reservationId ? String(reservationId) : null;
               
-              if (!reservationShipId) {
-                // 배 ID가 없으면 제외
-                console.log('[ReservationCalendar] 배 ID가 없어서 제외');
-                return false;
-              }
-              
-              const matches = String(reservationShipId) === String(selectedBoat);
-              if (!matches) {
-                console.log('[ReservationCalendar] 배 필터 제외:', reservationShipId, '!==', selectedBoat);
-              } else {
-                console.log('[ReservationCalendar] 배 필터 통과:', reservationShipId);
-              }
-              return matches;
+              return {
+                reservationPublicId: reservationIdStr,
+                name: reservation.nickname || reservation.username || reservation.name || reservation.userName || `예약자${index + 1}`,
+                count: reservation.headCount || reservation.head_count || 0,
+                status: getProcessStatusText(reservation.process),
+                process: reservation.process,
+                phone: reservation.phone || reservation.phoneNumber || reservation.phone_number || '',
+                totalPrice: reservation.totalPrice || reservation.price || 0,
+                memo: reservation.request || reservation.memo || reservation.notification || reservation.description || '',
+                shipFishType: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || ''
+              };
             });
-          } else {
-            // 배 ID가 없는 경우 모든 예약 표시 (배 필터 무시)
-            console.log('[ReservationCalendar] 배 ID가 없어서 배 필터 무시');
           }
-          
-          console.log('[ReservationCalendar] 배 필터링 후 개수:', filteredReservations.length, '(이전:', beforeBoatFilter, ')');
-        } else {
-          console.log('[ReservationCalendar] 배 필터 미적용 (배 미선택)');
+        } else if (Array.isArray(scheduleResult)) {
+          // 배열 형태 응답인 경우
+          scheduleDetail = scheduleResult[0];
+        } else if (scheduleResult.data) {
+          scheduleDetail = scheduleResult.data;
         }
         
-        // 타입 필터 적용 (타입 필드가 있는 예약만 필터링)
-        if (selectedType) {
-          const typeMap = { '일반예약': 'NORMAL', '선예약': 'EARLY' };
-          const apiType = typeMap[selectedType];
-          if (apiType) {
-            const beforeTypeFilter = filteredReservations.length;
-            
-            // 타입 필드가 있는 예약이 있는지 확인
-            const hasTypeField = filteredReservations.some(r => r.type || r.reservationType);
-            
-            if (hasTypeField) {
-              // 타입 필드가 있는 경우만 필터링
-              filteredReservations = filteredReservations.filter(reservation => {
-                const reservationType = reservation.type || reservation.reservationType;
-                if (!reservationType) {
-                  // 타입 필드가 없으면 제외
-                  console.log('[ReservationCalendar] 타입 필터 제외 (타입 필드 없음)');
-                  return false;
-                }
-                const matches = reservationType === apiType;
-                if (!matches) {
-                  console.log('[ReservationCalendar] 타입 필터 제외:', reservationType, '!==', apiType);
-                }
-                return matches;
-              });
-            } else {
-              // 타입 필드가 없는 경우 모든 예약 표시 (타입 필터 무시)
-              console.log('[ReservationCalendar] 타입 필드가 없어서 타입 필터 무시');
-            }
-            
-            console.log('[ReservationCalendar] 타입 필터링 후 개수:', filteredReservations.length, '(이전:', beforeTypeFilter, ')');
-          }
-        } else {
-          console.log('[ReservationCalendar] 타입 필터 미적용 (타입 미선택)');
+        console.log('[ReservationCalendar] 스케줄 상세 정보:', scheduleDetail);
+        console.log('[ReservationCalendar] 예약 목록:', reservations);
+        
+        // 배 정보 가져오기
+        const ship = scheduleDetail?.ship || {};
+        const schedule = scheduleDetail?.schedule || {};
+        const maxHeadCount = ship.maxHeadCount || 18;
+        const fishType = ship.fishType || dayData.type || '쭈갑';
+        const price = ship.price || scheduleDetail?.price || 90000;
+        const notification = ship.notification || '쭈꾸미 위주의 낚시';
+        
+        // 예약 정보가 없으면 아무 반응도 없음
+        if (reservations.length === 0 && !scheduleDetail) {
+          console.log('[ReservationCalendar] 스케줄 상세 정보가 없어서 모달을 표시하지 않습니다.');
+          return;
         }
-        
-        console.log('[ReservationCalendar] 최종 필터링된 예약 개수:', filteredReservations.length);
-        
-        reservations = filteredReservations.map((reservation, index) => {
-          console.log(`[ReservationCalendar] 예약 ${index + 1} 원본 데이터:`, reservation);
-          
-          // reservationPublicId 찾기 (reservationId 우선 확인 - 실제 데이터에 reservationId로 오는 경우)
-          const reservationId = reservation.reservationId ||
-                               reservation.reservationPublicId || 
-                               reservation.reservation_public_id || 
-                               reservation.reservation_id || 
-                               reservation.id;
-          
-          // 숫자일 경우 문자열로 변환
-          const reservationIdStr = reservationId ? String(reservationId) : null;
-          
-          const formatted = {
-            reservationPublicId: reservationIdStr,
-            name: reservation.username || reservation.name || reservation.nickname || reservation.userName || `예약자${index + 1}`,
-            count: reservation.headCount || reservation.head_count || 0,
-            status: getProcessStatusText(reservation.process),
-            process: reservation.process,
-            phone: reservation.phone || reservation.phoneNumber || reservation.phone_number || '',
-            totalPrice: reservation.totalPrice || reservation.price || 0,
-            memo: reservation.request || reservation.memo || reservation.notification || reservation.description || '',
-            shipFishType: reservation.shipFishType || reservation.ship?.fishType || reservation.fishType || ''
-          };
-          
-          console.log(`[ReservationCalendar] 예약 ${index + 1} 포맷된 데이터:`, formatted);
-          return formatted;
-        });
-        
-        console.log('[ReservationCalendar] 최종 포맷된 예약 목록:', reservations);
-        console.log('[ReservationCalendar] 예약 목록 개수:', reservations.length);
         
         // 전체 예약 목록 저장
         setAllReservations(reservations);
         
-        // schedulePublicId 찾기 - 예약 데이터에서 먼저 찾기
-        let foundSchedulePublicId = null;
-        
-        // 필터링된 예약 데이터에서 schedulePublicId 찾기
-        if (filteredReservations.length > 0) {
-          for (const reservation of filteredReservations) {
-            const scheduleId = reservation.schedulePublicId || 
-                              reservation.schedule_public_id ||
-                              reservation.schedule?.schedulePublicId ||
-                              reservation.schedule?.schedule_public_id;
-            if (scheduleId) {
-              foundSchedulePublicId = String(scheduleId);
-              console.log('[ReservationCalendar] 예약 데이터에서 schedulePublicId 발견:', foundSchedulePublicId);
-              break;
-            }
-          }
-        }
-        
-        // 예약 데이터에서 찾지 못한 경우 dayData에서 찾기
-        if (!foundSchedulePublicId) {
-          foundSchedulePublicId = dayData.schedulePublicId || 
-                                 dayData.scheduleData?.schedulePublicId;
-          if (foundSchedulePublicId) {
-            console.log('[ReservationCalendar] dayData에서 schedulePublicId 발견:', foundSchedulePublicId);
-          }
-        }
-        
-        // 여전히 없으면 /schedules/departure API로 다음 출항 스케줄 가져오기 (Home.jsx 방식)
-        let scheduleDetail = null;
-        if (!foundSchedulePublicId) {
-          try {
-            console.log('[ReservationCalendar] /schedules/departure API로 schedulePublicId 조회 시도');
-            const departureResponse = await apiGet('/schedules/departure');
-            if (departureResponse.ok) {
-              const departureResult = await departureResponse.json();
-              if (departureResult.success && departureResult.data && departureResult.data.schedulePublicId) {
-                foundSchedulePublicId = departureResult.data.schedulePublicId;
-                console.log('[ReservationCalendar] /schedules/departure에서 schedulePublicId 발견:', foundSchedulePublicId);
-              }
-            }
-          } catch (error) {
-            console.error('[ReservationCalendar] /schedules/departure 조회 실패:', error);
-          }
-        }
-        
-        // schedulePublicId가 있으면 스케줄 상세 정보 가져오기
-        if (foundSchedulePublicId) {
-          try {
-            const scheduleResponse = await apiGet(`/schedules/${foundSchedulePublicId}`);
-            if (scheduleResponse.ok) {
-              const scheduleResult = await scheduleResponse.json();
-              if (scheduleResult.success && scheduleResult.data) {
-                scheduleDetail = scheduleResult.data;
-                // scheduleDetail에서도 schedulePublicId 확인
-                if (scheduleDetail.schedule?.schedulePublicId && !foundSchedulePublicId) {
-                  foundSchedulePublicId = scheduleDetail.schedule.schedulePublicId;
-                }
-              }
-            }
-          } catch (error) {
-            console.error('[ReservationCalendar] 스케줄 상세 조회 실패:', error);
-          }
-        }
-        
-        // 배 정보 가져오기
-        const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
-        const maxHeadCount = selectedBoatData?.maxHeadCount || scheduleDetail?.ship?.maxHeadCount || 18;
-        const fishType = selectedBoatData?.fishType || scheduleDetail?.ship?.fishType || dayData.type || '쭈갑';
-        const price = selectedBoatData?.price || scheduleDetail?.ship?.price || 90000;
-        const notification = selectedBoatData?.notification || scheduleDetail?.ship?.notification || '쭈꾸미 위주의 낚시';
-        
-        console.log('[ReservationCalendar] 설정할 예약 목록:', reservations);
-        console.log('[ReservationCalendar] 예약 목록 개수:', reservations.length);
-        console.log('[ReservationCalendar] 최종 schedulePublicId:', foundSchedulePublicId);
-        console.log('[ReservationCalendar] dayData:', dayData);
-        
         setSelectedDayReservations({
-          date: `${month}월 ${dayData.date}일`,
+          date: `${dayMonth}월 ${dayNumber}일`,
           dayOfWeek: daysOfWeek[dayData.day],
           type: fishType,
           price: `${price.toLocaleString()}원`,
           capacity: `${maxHeadCount}명`,
           desc: notification,
           reservations: reservations,
-          schedulePublicId: foundSchedulePublicId,
+          schedulePublicId: schedulePublicId,
           scheduleDetail: scheduleDetail
         });
         
@@ -636,47 +439,21 @@ function ReservationCalendar() {
         setShowReservationModal(true);
       } else {
         // 에러 응답의 본문 확인
-        let errorMessage = `HTTP ${response.status}`;
+        let errorMessage = `HTTP ${scheduleResponse.status}`;
         try {
-          const errorData = await response.json();
-          console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 본문:', errorData);
+          const errorData = await scheduleResponse.json();
+          console.error('[ReservationCalendar] 스케줄 상세 조회 실패 - 응답 본문:', errorData);
           errorMessage = errorData.message || errorData.error || errorMessage;
         } catch (e) {
-          const errorText = await response.text();
-          console.error('[ReservationCalendar] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
+          const errorText = await scheduleResponse.text();
+          console.error('[ReservationCalendar] 스케줄 상세 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
         }
-        console.error('[ReservationCalendar] 예약 목록 조회 실패:', response.status, errorMessage);
-        // 실패 시 빈 예약 목록으로 표시
-        setAllReservations([]);
-        const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
-        setSelectedDayReservations({
-          date: `${month}월 ${dayData.date}일`,
-          dayOfWeek: daysOfWeek[dayData.day],
-          type: selectedBoatData?.fishType || dayData.type || '쭈갑',
-          price: selectedBoatData?.price ? `${selectedBoatData.price.toLocaleString()}원` : dayData.price || '90,000원',
-          capacity: `${selectedBoatData?.maxHeadCount || 18}명`,
-          desc: selectedBoatData?.notification || dayData.desc || '쭈꾸미 위주의 낚시',
-          reservations: [],
-          schedulePublicId: dayData.schedulePublicId
-        });
-        setShowReservationModal(true);
+        console.error('[ReservationCalendar] 스케줄 상세 조회 실패:', scheduleResponse.status, errorMessage);
+        alert(`스케줄 상세 정보를 불러올 수 없습니다: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('[ReservationCalendar] 예약 정보 가져오기 오류:', error);
-      // 에러 시 빈 예약 리스트로 모달 표시
-      setAllReservations([]);
-      const selectedBoatData = boats.find(b => b.id === parseInt(selectedBoat));
-      setSelectedDayReservations({
-        date: `${month}월 ${dayData.date}일`,
-        dayOfWeek: daysOfWeek[dayData.day],
-        type: selectedBoatData?.fishType || dayData.type || '쭈갑',
-        price: selectedBoatData?.price ? `${selectedBoatData.price.toLocaleString()}원` : dayData.price || '90,000원',
-        capacity: `${selectedBoatData?.maxHeadCount || 18}명`,
-        desc: selectedBoatData?.notification || dayData.desc || '쭈꾸미 위주의 낚시',
-        reservations: [],
-        schedulePublicId: dayData.schedulePublicId
-      });
-      setShowReservationModal(true);
+      console.error('[ReservationCalendar] 스케줄 상세 정보 가져오기 오류:', error);
+      alert('스케줄 상세 정보를 가져오는 중 오류가 발생했습니다.');
     }
   };
   
@@ -1014,6 +791,181 @@ function ReservationCalendar() {
     }
   };
 
+  // 스케줄 저장하기 (스케줄 생성 API)
+  const handleSaveShip = async () => {
+    if (!selectedBoat) {
+      alert('배를 선택해주세요.');
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      alert('날짜 범위를 선택해주세요.');
+      return;
+    }
+
+    // 타입 매핑: '일반예약' -> 'NORMAL', '선예약' -> 'EARLY'
+    const scheduleTypeMap = {
+      '일반예약': 'NORMAL',
+      '선예약': 'EARLY'
+    };
+    const scheduleType = selectedType ? scheduleTypeMap[selectedType] || 'NORMAL' : 'NORMAL';
+
+    try {
+      console.log('[ReservationCalendar] 스케줄 생성 API 요청 시작');
+      console.log('[ReservationCalendar] 요청 데이터:', {
+        startDate,
+        endDate,
+        shipId: parseInt(selectedBoat),
+        scheduleType
+      });
+      
+      const response = await apiPost('/schedules', {
+        startDate: startDate,
+        endDate: endDate,
+        shipId: parseInt(selectedBoat),
+        scheduleType: scheduleType
+      });
+
+      console.log('[ReservationCalendar] 스케줄 생성 API 응답:', response);
+      console.log('[ReservationCalendar] 응답 상태:', response.status, response.statusText);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ReservationCalendar] 스케줄 생성 API 성공 응답:', result);
+        
+        if (result.success) {
+          alert('스케줄이 생성되었습니다.');
+          // 달력 데이터 다시 불러오기
+          const calendarDays = generateCalendarDays(year, month);
+          const firstDay = new Date(year, month - 1, 1);
+          const lastDay = new Date(year, month, 0);
+          const fromDate = `${year}-${String(month).padStart(2, '0')}-01`;
+          const toDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+          
+          // 스케줄 데이터 다시 불러오기
+          try {
+            const reservationsResponse = await apiGet('/reservations');
+            if (reservationsResponse.ok) {
+              const reservationsResult = await reservationsResponse.json();
+              // 달력 데이터 갱신을 위해 useEffect 트리거
+              setYear(year);
+              setMonth(month);
+            }
+          } catch (error) {
+            console.error('[ReservationCalendar] 스케줄 생성 후 데이터 갱신 실패:', error);
+          }
+        } else {
+          alert('스케줄 생성에 실패했습니다: ' + (result.message || '알 수 없는 오류'));
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[ReservationCalendar] 스케줄 생성 API 오류 응답:', errorData);
+        alert('스케줄 생성에 실패했습니다: ' + (errorData.message || response.statusText));
+      }
+    } catch (error) {
+      console.error('[ReservationCalendar] 스케줄 생성 중 오류 발생:', error);
+      alert('스케줄 생성 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 스케줄 삭제하기 (스케줄 삭제 API)
+  const handleDeleteShip = async () => {
+    if (!selectedBoat) {
+      alert('배를 선택해주세요.');
+      return;
+    }
+
+    if (!startDate || !endDate) {
+      alert('날짜 범위를 선택해주세요.');
+      return;
+    }
+
+    // 날짜 범위와 배를 기반으로 스케줄 찾기
+    let schedulePublicId = null;
+    
+    try {
+      // 예약 데이터에서 해당 날짜 범위와 배에 해당하는 스케줄 찾기
+      const reservationsResponse = await apiGet('/reservations');
+      if (reservationsResponse.ok) {
+        const reservationsResult = await reservationsResponse.json();
+        let allReservations = [];
+        
+        if (Array.isArray(reservationsResult)) {
+          allReservations = reservationsResult;
+        } else if (reservationsResult.success && reservationsResult.data) {
+          allReservations = Array.isArray(reservationsResult.data) ? reservationsResult.data : 
+                          (reservationsResult.data.content ? reservationsResult.data.content : []);
+        }
+        
+        // 날짜 범위와 배에 해당하는 예약 찾기
+        const matchingReservation = allReservations.find(reservation => {
+          const reservationDate = reservation.scheduleDeparture || reservation.departureDate || reservation.date || reservation.scheduleDate;
+          if (!reservationDate) return false;
+          const dateKey = reservationDate.split('T')[0];
+          const matchesDate = dateKey >= startDate && dateKey <= endDate;
+          
+          const reservationShipId = reservation.ship?.shipId || reservation.shipId;
+          const matchesShip = String(reservationShipId) === String(selectedBoat);
+          
+          return matchesDate && matchesShip;
+        });
+        
+        if (matchingReservation) {
+          schedulePublicId = matchingReservation.schedulePublicId || 
+                            matchingReservation.schedule_public_id ||
+                            matchingReservation.schedule?.schedulePublicId;
+        }
+      }
+      
+      // 스케줄을 찾지 못한 경우, 달력 데이터에서 찾기
+      if (!schedulePublicId) {
+        const matchingDay = calendarData.find(day => {
+          if (day.prevMonth || day.nextMonth) return false;
+          const dayDate = `${year}-${String(month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+          return dayDate >= startDate && dayDate <= endDate && day.schedulePublicId;
+        });
+        
+        if (matchingDay) {
+          schedulePublicId = matchingDay.schedulePublicId;
+        }
+      }
+      
+      if (!schedulePublicId) {
+        alert('해당 날짜 범위와 배에 대한 스케줄을 찾을 수 없습니다.');
+        return;
+      }
+      
+      if (!window.confirm('선택한 스케줄을 삭제하시겠습니까?')) {
+        return;
+      }
+
+      console.log('[ReservationCalendar] 스케줄 삭제 API 요청 시작');
+      console.log('[ReservationCalendar] 삭제할 schedulePublicId:', schedulePublicId);
+      
+      const response = await apiDelete(`/schedules/${schedulePublicId}`);
+
+      console.log('[ReservationCalendar] 스케줄 삭제 API 응답:', response);
+      console.log('[ReservationCalendar] 응답 상태:', response.status, response.statusText);
+
+      if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+        console.log('[ReservationCalendar] 스케줄 삭제 API 성공 응답:', result);
+        
+        alert('스케줄이 삭제되었습니다.');
+        // 달력 데이터 다시 불러오기
+        setYear(year);
+        setMonth(month);
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[ReservationCalendar] 스케줄 삭제 API 오류 응답:', errorData);
+        alert('스케줄 삭제에 실패했습니다: ' + (errorData.message || response.statusText));
+      }
+    } catch (error) {
+      console.error('[ReservationCalendar] 스케줄 삭제 중 오류 발생:', error);
+      alert('스케줄 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   const handlePrevYear = () => setYear(year - 1);
   const handleNextYear = () => setYear(year + 1);
   const handlePrevMonth = () => {
@@ -1100,206 +1052,210 @@ function ReservationCalendar() {
   return (
     <Layout>
       <div className="flex w-full max-w-[1183px] flex-col justify-end items-start bg-white py-[26px]">
-        {/* Header section */}
+        {/* Header and Filter section in one card */}
         <div className="flex px-[42px] flex-col items-start gap-[10px] self-stretch">
-          <div className="flex w-full mx-auto py-[40px] px-[60px] flex-col justify-center items-start gap-[10px] rounded-[20px] bg-[#F7F8FC] shadow-[0_4px_4px_0_rgba(39,84,218,0.2)] title-section">
-            <h1 className="text-[#272C3C] font-pretendard text-[30px] font-bold leading-normal">
-              예약달력
-            </h1>
-            <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">
-              예약달력을 관리할 수 있습니다. <br />
-              아래의 날짜 설정기능을 이용해 기간별 배 지정을 간편히 할 수 있습니다.
-            </p>
-          </div>
-        </div>
+          <div className="flex w-full mx-auto py-[40px] px-[60px] flex-col justify-center items-start gap-[40px] rounded-[20px] bg-[#F7F8FC] shadow-[0_4px_4px_0_rgba(39,84,218,0.2)]">
+            {/* Title and Description */}
+            <div className="flex flex-col items-start gap-[10px]">
+              <h1 className="text-[#272C3C] font-pretendard text-[30px] font-bold leading-normal">
+                예약달력
+              </h1>
+              <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">
+                예약달력을 관리할 수 있습니다. <br />
+                아래의 날짜 설정기능을 이용해 기간별 배 지정을 간편히 할 수 있습니다.
+              </p>
+            </div>
 
-        {/* Filter section */}
-        <div className="flex px-[42px] flex-col items-start gap-[65px] mt-[26px]">
-          <div className="flex flex-col items-start gap-[10px]">
-            <div className="flex pl-[60px] flex-col justify-center items-start gap-[40px] self-stretch">
-              <div className="flex w-[986px] flex-col items-end gap-[15px]">
-                {/* Date and Type filters */}
-                <div className="flex flex-col items-start gap-[13px] self-stretch">
-                  {/* Date range */}
-                  <div className="flex w-[800px] justify-between items-center">
-                    <div className="flex items-start gap-[10px]">
-                      <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
-                        <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">날짜</p>
-                      </div>
-                      <div className="flex items-center gap-[12px] relative">
-                        <div className="flex items-center">
-                          <div 
-                            className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                            onClick={() => setShowStartCalendar(!showStartCalendar)}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
-                            </svg>
-                            <p className={`font-pretendard text-[16px] font-normal leading-normal ${startDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
-                              {startDate || '시작날짜'}
-                            </p>
-                          </div>
-                          <div className="flex w-[28px] py-[9px] px-[10px] flex-col justify-center items-center gap-[10px]">
-                            <p className="text-[#BDBDBD] font-pretendard text-[16px] font-semibold leading-normal">-</p>
-                          </div>
-                          <div 
-                            className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                            onClick={() => setShowEndCalendar(!showEndCalendar)}
-                          >
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
-                            </svg>
-                            <p className={`font-pretendard text-[16px] font-normal leading-normal ${endDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
-                              {endDate || '끝날짜'}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        {/* 시작날짜 캘린더 팝업 */}
-                        {showStartCalendar && (
-                          <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                            <div className="flex items-center justify-between mb-[15px]">
-                              <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                              <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                              <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
-                              <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                              <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
-                            </div>
-                            <div className="grid grid-cols-7 gap-[5px]">
-                              {daysOfWeek.map((day, idx) => (
-                                <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
-                              ))}
-                              {generateCalendarDays(year, month).map((day, idx) => (
-                                <div
-                                  key={idx}
-                                  onClick={() => handleDateSelect(day)}
-                                  className={`text-center text-[14px] py-[8px] cursor-pointer rounded
-                                    ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                    ${day.isCurrentMonth && startDate && startDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
-                                    hover:bg-[#EEF4FF]`}
-                                >
-                                  {day.date}
-                                </div>
-                              ))}
-                            </div>
-                            <button 
-                              onClick={() => setShowStartCalendar(false)}
-                              className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
-                            >
-                              이전달
-                            </button>
-                          </div>
-                        )}
-                        
-                        {/* 끝날짜 캘린더 팝업 */}
-                        {showEndCalendar && (
-                          <div className="absolute top-[45px] left-[290px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                            <div className="flex items-center justify-between mb-[15px]">
-                              <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                              <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                              <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
-                              <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                              <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
-                            </div>
-                            <div className="grid grid-cols-7 gap-[5px]">
-                              {daysOfWeek.map((day, idx) => (
-                                <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
-                              ))}
-                              {generateCalendarDays(year, month).map((day, idx) => (
-                                <div
-                                  key={idx}
-                                  onClick={() => handleDateSelect(day)}
-                                  className={`text-center text-[14px] py-[8px] cursor-pointer rounded
-                                    ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                    ${day.isCurrentMonth && endDate && endDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
-                                    hover:bg-[#EEF4FF]`}
-                                >
-                                  {day.date}
-                                </div>
-                              ))}
-                            </div>
-                            <button 
-                              onClick={() => setShowEndCalendar(false)}
-                              className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
-                            >
-                              이전달
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+            {/* Filter section */}
+            <div className="flex w-full flex-col gap-[15px]">
+              {/* Date and Type in one row */}
+              <div className="flex justify-between items-center self-stretch">
+                {/* Date range - Left side */}
+                <div className="flex items-start gap-[10px]">
+                  <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
+                    <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">날짜</p>
                   </div>
-
-                  {/* Type selector */}
-                  <div className="flex h-[37px] items-start gap-[10px] relative">
-                    <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
-                      <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">타입</p>
-                    </div>
-                    <div className="flex h-[37px] items-center gap-[5px]">
+                  <div className="flex items-center gap-[12px] relative">
+                    <div className="flex items-center">
                       <div 
-                        className="flex w-[184px] h-[37px] py-[9px] px-[10px] pr-[20px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                        onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+                        className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
+                        onClick={() => setShowStartCalendar(!showStartCalendar)}
                       >
-                        <p className={`font-pretendard text-[16px] font-normal leading-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
-                          {selectedType || '타입 선택'}
-                        </p>
-                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
                         </svg>
+                        <p className={`font-pretendard text-[16px] font-normal leading-normal ${startDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
+                          {startDate || '시작날짜'}
+                        </p>
                       </div>
-                      {showTypeDropdown && (
-                        <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
-                          <div 
-                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
-                            onClick={() => {
-                              setSelectedType('일반예약');
-                              setShowTypeDropdown(false);
-                            }}
-                          >
-                            <p className="text-[#272C3C] font-pretendard text-[16px]">일반예약</p>
-                          </div>
-                          <div 
-                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
-                            onClick={() => {
-                              setSelectedType('선예약');
-                              setShowTypeDropdown(false);
-                            }}
-                          >
-                            <p className="text-[#272C3C] font-pretendard text-[16px]">선예약</p>
-                          </div>
-                        </div>
-                      )}
+                      <div className="flex w-[28px] py-[9px] px-[10px] flex-col justify-center items-center gap-[10px]">
+                        <p className="text-[#BDBDBD] font-pretendard text-[16px] font-semibold leading-normal">-</p>
+                      </div>
+                      <div 
+                        className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
+                        onClick={() => setShowEndCalendar(!showEndCalendar)}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
+                        </svg>
+                        <p className={`font-pretendard text-[16px] font-normal leading-normal ${endDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
+                          {endDate || '끝날짜'}
+                        </p>
+                      </div>
                     </div>
+                    
+                    {/* 시작날짜 캘린더 팝업 */}
+                    {showStartCalendar && (
+                      <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
+                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${day.isCurrentMonth && startDate && startDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowStartCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          이전달
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* 끝날짜 캘린더 팝업 */}
+                    {showEndCalendar && (
+                      <div className="absolute top-[45px] left-[290px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
+                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${day.isCurrentMonth && endDate && endDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowEndCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          이전달
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Boat selector and Save button */}
-                <div className="flex justify-between items-center self-stretch">
-                  <div className="flex items-start gap-[10px]">
-                    <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
-                      <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">배</p>
-                    </div>
-                    <div className="flex w-[184px] h-[37px] py-[9px] px-[10px] pr-[20px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white">
-                      <select 
-                        className="text-[#BDBDBD] font-pretendard text-[16px] font-normal leading-normal border-none outline-none bg-transparent flex-1 cursor-pointer"
-                        value={selectedBoat}
-                        onChange={(e) => setSelectedBoat(e.target.value)}
-                      >
-                        <option key="default" value="">배 선택</option>
-                        {boats.map((boat, index) => (
-                          <option key={boat.id || `boat-${index}`} value={boat.id}>
-                            {boat.fishType} - {boat.price ? boat.price.toLocaleString() : '0'}원 (최대 {boat.maxHeadCount}명)
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                {/* Type selector - Right side */}
+                <div className="flex items-start gap-[10px] relative">
+                  <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
+                    <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">타입</p>
                   </div>
-                  <div className="flex px-[10px] items-center gap-[10px]">
-                    <button className="flex py-[9px] px-[20px] justify-center items-center gap-[10px] rounded-[20px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                      <span className="text-[#1840B8] font-pretendard text-[16px] font-medium leading-normal">저장하기</span>
-                    </button>
+                  <div className="flex h-[37px] items-center gap-[5px]">
+                    <div 
+                      className="flex w-[184px] h-[37px] py-[9px] px-[10px] pr-[20px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
+                      onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+                    >
+                      <p className={`font-pretendard text-[16px] font-normal leading-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
+                        {selectedType || '타입 선택'}
+                      </p>
+                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
+                      </svg>
+                    </div>
+                    {showTypeDropdown && (
+                      <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
+                        <div 
+                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
+                          onClick={() => {
+                            setSelectedType('일반예약');
+                            setShowTypeDropdown(false);
+                          }}
+                        >
+                          <p className="text-[#272C3C] font-pretendard text-[16px]">일반예약</p>
+                        </div>
+                        <div 
+                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
+                          onClick={() => {
+                            setSelectedType('선예약');
+                            setShowTypeDropdown(false);
+                          }}
+                        >
+                          <p className="text-[#272C3C] font-pretendard text-[16px]">선예약</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {/* Boat selector - Second row */}
+              <div className="flex items-start gap-[10px]">
+                <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
+                  <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">배</p>
+                </div>
+                <div className="flex w-[184px] h-[37px] py-[9px] px-[10px] pr-[20px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white">
+                  <select 
+                    className="text-[#BDBDBD] font-pretendard text-[16px] font-normal leading-normal border-none outline-none bg-transparent flex-1 cursor-pointer"
+                    value={selectedBoat}
+                    onChange={(e) => setSelectedBoat(e.target.value)}
+                  >
+                    <option key="default" value="">배 선택</option>
+                    {boats.map((boat, index) => (
+                      <option key={boat.id || `boat-${index}`} value={boat.id}>
+                        {boat.fishType} - {boat.price ? boat.price.toLocaleString() : '0'}원 (최대 {boat.maxHeadCount}명)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Save and Delete buttons - Bottom right */}
+              <div className="flex justify-end items-center gap-[10px] self-stretch">
+                <button 
+                  onClick={handleSaveShip}
+                  className="flex py-[9px] px-[20px] justify-center items-center gap-[10px] rounded-[20px] border-2 border-[#BDBDBD] bg-white cursor-pointer hover:opacity-80"
+                >
+                  <span className="text-[#73757C] font-pretendard text-[16px] font-medium leading-normal">저장하기</span>
+                </button>
+                <button 
+                  onClick={handleDeleteShip}
+                  className="flex py-[9px] px-[20px] justify-center items-center gap-[10px] rounded-[20px] border-2 border-[#BDBDBD] bg-white cursor-pointer hover:opacity-80"
+                >
+                  <span className="text-[#73757C] font-pretendard text-[16px] font-medium leading-normal">삭제하기</span>
+                </button>
               </div>
             </div>
           </div>

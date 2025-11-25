@@ -94,6 +94,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: true,
       },
+      '/admin': {
+        target: 'https://jjubul.duckdns.org',
+        changeOrigin: true,
+        secure: true,
+      },
       '/main': {
         target: 'https://jjubul.duckdns.org',
         changeOrigin: true,
