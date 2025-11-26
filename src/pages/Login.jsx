@@ -83,6 +83,8 @@ function Login() {
           console.log('[2단계] 모든 헤더 키:', allHeaderKeys);
           
           // Set-Cookie 헤더 확인 (배열일 수 있음)
+          // 참고: 백엔드가 쿠키가 아닌 응답 헤더의 'authorization' 필드로 토큰을 보내므로
+          // Set-Cookie가 없어도 정상입니다.
           const setCookieHeader = response.headers.get('Set-Cookie') || response.headers.get('set-cookie');
           const setCookieArray = response.headers.getSetCookie ? response.headers.getSetCookie() : [];
           console.log('[2단계] Set-Cookie 헤더 확인:', {
@@ -90,15 +92,18 @@ function Login() {
             'Set-Cookie (get)': setCookieHeader,
             'Set-Cookie (배열)': setCookieArray,
             'getSetCookie() 사용 가능': !!response.headers.getSetCookie,
-            모든SetCookie: allHeaderKeys.filter(k => k.toLowerCase().includes('cookie'))
+            모든SetCookie: allHeaderKeys.filter(k => k.toLowerCase().includes('cookie')),
+            '참고': '백엔드가 헤더의 authorization 필드로 토큰을 보내므로 쿠키가 없어도 정상입니다.'
           });
           
           // document.cookie 확인 (브라우저에 저장된 쿠키)
-          console.log('[2단계] 브라우저 쿠키 (document.cookie):', document.cookie);
+          // 참고: 백엔드가 쿠키를 사용하지 않으므로 비어있어도 정상입니다.
+          console.log('[2단계] 브라우저 쿠키 (document.cookie):', document.cookie || '(비어있음 - 정상: 백엔드가 쿠키를 사용하지 않음)');
           console.log('[2단계] 쿠키 상세 분석:', {
             쿠키존재: !!document.cookie,
-            쿠키길이: document.cookie.length,
-            쿠키분할: document.cookie ? document.cookie.split(';') : []
+            쿠키길이: document.cookie ? document.cookie.length : 0,
+            쿠키분할: document.cookie ? document.cookie.split(';') : [],
+            '참고': '백엔드가 응답 헤더의 authorization 필드로 토큰을 보내므로 쿠키가 없어도 정상입니다.'
           });
           
           // 응답 본문 확인

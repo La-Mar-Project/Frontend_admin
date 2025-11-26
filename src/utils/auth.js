@@ -35,9 +35,13 @@ export const login = (username, password) => {
   if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
     name = '관리자';
     loginSuccess = true;
-    // 로그인 성공 시 토큰을 localStorage에 저장
-    const token = btoa(`${username}:${Date.now()}`); // 간단한 토큰 생성
-    localStorage.setItem('adminToken', token);
+    // 백엔드에서 받은 토큰이 이미 있으면 덮어쓰지 않음
+    // 토큰이 없을 때만 로컬 토큰 생성 (백엔드 토큰 요청 실패 시 대비)
+    if (!localStorage.getItem('adminToken')) {
+      const token = btoa(`${username}:${Date.now()}`); // 간단한 토큰 생성
+      localStorage.setItem('adminToken', token);
+    }
+    // 사용자 정보는 항상 업데이트
     localStorage.setItem('adminUsername', username);
     localStorage.setItem('adminType', 'main'); // 메인 관리자 구분
   } else {
@@ -49,8 +53,12 @@ export const login = (username, password) => {
       if (assistant.active === '활성' && assistant.password === password) {
         name = assistant.name || username;
         loginSuccess = true;
-        const token = btoa(`${username}:${Date.now()}`);
-        localStorage.setItem('adminToken', token);
+        // 백엔드에서 받은 토큰이 이미 있으면 덮어쓰지 않음
+        if (!localStorage.getItem('adminToken')) {
+          const token = btoa(`${username}:${Date.now()}`);
+          localStorage.setItem('adminToken', token);
+        }
+        // 사용자 정보는 항상 업데이트
         localStorage.setItem('adminUsername', username);
         localStorage.setItem('adminType', 'assistant'); // 보조 관리자 구분
       }
