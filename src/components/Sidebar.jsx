@@ -5,7 +5,7 @@ function Sidebar() {
   const navigate = useNavigate();
   
   const handleLogoClick = () => {
-    navigate('/home');
+    navigate('/dashboard');
   };
 
   return (
