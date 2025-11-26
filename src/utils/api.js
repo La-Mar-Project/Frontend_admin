@@ -5,7 +5,7 @@
 
 // 환경 변수에서 API 기본 URL 가져오기
 // 개발 환경: Vite 프록시 사용 (CORS 회피) → 빈 문자열로 설정하면 상대 경로로 요청되어 프록시가 자동으로 백엔드로 전달
-// 프로덕션 환경: 실제 백엔드 URL 사용
+// 프로덕션 환경: 실제 백엔드 URL 사용 (.env 파일의 VITE_API_BASE_URL 사용)
 const API_BASE_URL = import.meta.env.PROD 
   ? (import.meta.env.VITE_API_BASE_URL || '')
   : '';
@@ -44,14 +44,21 @@ export const apiRequest = async (endpoint, options = {}) => {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
 
-  // 옵션 병합
+  // 옵션 병합 (options.headers가 있으면 우선 적용, 없으면 defaultHeaders 사용)
   const config = {
     ...options,
     headers: {
       ...defaultHeaders,
-      ...options.headers,
+      ...options.headers, // options.headers가 있으면 defaultHeaders를 덮어씀
     },
   };
+  
+  // 디버깅: 최종 헤더 확인
+  console.log('[API Request] 최종 헤더:', {
+    'Content-Type': config.headers['Content-Type'],
+    'Authorization': config.headers['Authorization'] ? config.headers['Authorization'].substring(0, 30) + '...' : '없음',
+    '모든 헤더 키': Object.keys(config.headers)
+  });
 
   try {
     console.log('[API Request] 실제 요청 URL:', url);
