@@ -40,8 +40,19 @@ export const apiRequest = async (endpoint, options = {}) => {
   // 토큰이 있으면 Authorization 헤더 추가 (localStorage에서 가져오기)
   // adminToken 또는 token 둘 다 확인
   const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+  console.log('[API Request] localStorage에서 토큰 확인:', {
+    adminToken: localStorage.getItem('adminToken') ? localStorage.getItem('adminToken').substring(0, 30) + '...' : '없음',
+    token: localStorage.getItem('token') ? localStorage.getItem('token').substring(0, 30) + '...' : '없음',
+    사용할토큰: token ? token.substring(0, 30) + '...' : '없음'
+  });
+  
   if (token) {
-    defaultHeaders['Authorization'] = `Bearer ${token}`;
+    // 토큰에 이미 "Bearer "가 포함되어 있으면 그대로 사용, 없으면 추가
+    const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    defaultHeaders['Authorization'] = authHeader;
+    console.log('[API Request] Authorization 헤더 설정:', authHeader.substring(0, 40) + '...');
+  } else {
+    console.warn('[API Request] 토큰이 없어서 Authorization 헤더를 추가하지 않음');
   }
 
   // 옵션 병합 (options.headers가 있으면 우선 적용, 없으면 defaultHeaders 사용)
