@@ -50,8 +50,10 @@ function Login() {
         console.log('[2단계] Authorization 헤더:', `Basic ${btoa(`${username}:${password}`)}`);
         
         // 인증 서버는 별도 도메인이므로 직접 fetch 사용
+        // 쿠키를 받기 위해 credentials: 'include' 추가
         const response = await fetch(authUrl, {
           method: 'GET',
+          credentials: 'include', // 쿠키를 포함하여 요청/응답
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Basic ${btoa(`${username}:${password}`)}`
@@ -79,14 +81,25 @@ function Login() {
           console.log('[2단계] 응답 헤더 (원본):', responseHeaders);
           console.log('[2단계] 응답 헤더 (소문자):', lowerCaseHeaders);
           console.log('[2단계] 모든 헤더 키:', allHeaderKeys);
+          
+          // Set-Cookie 헤더 확인 (배열일 수 있음)
+          const setCookieHeader = response.headers.get('Set-Cookie') || response.headers.get('set-cookie');
+          const setCookieArray = response.headers.getSetCookie ? response.headers.getSetCookie() : [];
           console.log('[2단계] Set-Cookie 헤더 확인:', {
-            'set-cookie': lowerCaseHeaders['set-cookie'],
-            'Set-Cookie': responseHeaders['Set-Cookie'],
+            'set-cookie (단일)': lowerCaseHeaders['set-cookie'],
+            'Set-Cookie (get)': setCookieHeader,
+            'Set-Cookie (배열)': setCookieArray,
+            'getSetCookie() 사용 가능': !!response.headers.getSetCookie,
             모든SetCookie: allHeaderKeys.filter(k => k.toLowerCase().includes('cookie'))
           });
           
           // document.cookie 확인 (브라우저에 저장된 쿠키)
           console.log('[2단계] 브라우저 쿠키 (document.cookie):', document.cookie);
+          console.log('[2단계] 쿠키 상세 분석:', {
+            쿠키존재: !!document.cookie,
+            쿠키길이: document.cookie.length,
+            쿠키분할: document.cookie ? document.cookie.split(';') : []
+          });
           
           // 응답 본문 확인
           const result = await response.json();
@@ -143,23 +156,25 @@ function Login() {
             token = lowerCaseHeaders['x-access-token'];
             console.log('[2단계] 토큰 위치: 응답 헤더 X-Access-Token');
           }
-          // 7. Set-Cookie 헤더에서 확인
-          else if (lowerCaseHeaders['set-cookie']) {
-            // 쿠키에서 토큰 추출 시도
-            const cookies = lowerCaseHeaders['set-cookie'];
-            console.log('[2단계] Set-Cookie 헤더에서 쿠키 확인:', cookies);
+          // 7. Set-Cookie 헤더에서 확인 (배열 지원) - 위에서 선언한 변수 재사용
+          if (setCookieArray.length > 0 || setCookieHeader) {
+            const cookiesToCheck = setCookieArray.length > 0 ? setCookieArray.join('; ') : setCookieHeader;
+            console.log('[2단계] Set-Cookie 헤더에서 쿠키 확인:', cookiesToCheck);
+            console.log('[2단계] Set-Cookie 배열:', setCookieArray);
+            
             // 쿠키에서 access_token, token, accessToken 등 찾기
             const cookiePatterns = [
               /(?:access_token|accessToken)=([^;,\s]+)/i,
               /(?:token)=([^;,\s]+)/i,
-              /(?:auth_token|authToken)=([^;,\s]+)/i
+              /(?:auth_token|authToken)=([^;,\s]+)/i,
+              /(?:jwt|JWT)=([^;,\s]+)/i
             ];
             
             for (const pattern of cookiePatterns) {
-              const match = cookies.match(pattern);
+              const match = cookiesToCheck.match(pattern);
               if (match) {
                 token = decodeURIComponent(match[1]);
-                console.log('[2단계] 토큰 위치: Set-Cookie 헤더에서 추출');
+                console.log('[2단계] ✅ 토큰 위치: Set-Cookie 헤더에서 추출');
                 break;
               }
             }
@@ -170,14 +185,15 @@ function Login() {
             const cookiePatterns = [
               /(?:access_token|accessToken)=([^;,\s]+)/i,
               /(?:token)=([^;,\s]+)/i,
-              /(?:auth_token|authToken)=([^;,\s]+)/i
+              /(?:auth_token|authToken)=([^;,\s]+)/i,
+              /(?:jwt|JWT)=([^;,\s]+)/i
             ];
             
             for (const pattern of cookiePatterns) {
               const match = document.cookie.match(pattern);
               if (match) {
                 token = decodeURIComponent(match[1]);
-                console.log('[2단계] 토큰 위치: document.cookie에서 추출');
+                console.log('[2단계] ✅ 토큰 위치: document.cookie에서 추출');
                 break;
               }
             }
@@ -219,27 +235,24 @@ function Login() {
         // 백엔드 토큰 요청 실패해도 로컬 인증이 성공했으면 계속 진행
       }
 
-      // 3. 토큰 저장 (백엔드 토큰이 있으면 사용, 없으면 로컬 토큰 생성)
+      // 3. 토큰 저장 (백엔드 토큰이 필수)
       console.log('[3단계] 토큰 저장 시작');
       if (token) {
         // 토큰에 "Bearer "가 포함되어 있으면 제거 (api.js에서 추가하므로)
         const cleanToken = token.replace(/^Bearer\s+/i, '');
         localStorage.setItem('adminToken', cleanToken);
-        console.log('[3단계] 백엔드 토큰 저장 완료:', {
+        console.log('[3단계] ✅ 백엔드 토큰 저장 완료:', {
           저장된토큰: cleanToken.substring(0, 30) + '...',
           토큰길이: cleanToken.length,
           토큰전체: cleanToken,
           localStorage확인: localStorage.getItem('adminToken')?.substring(0, 30) + '...'
         });
       } else {
-        // 백엔드 토큰이 없으면 로컬 토큰 생성
-        const localToken = btoa(`${username}:${Date.now()}`);
-        localStorage.setItem('adminToken', localToken);
-        console.log('[3단계] 로컬 토큰 생성 및 저장:', {
-          token: localToken.substring(0, 20) + '...',
-          tokenLength: localToken.length,
-          token전체: localToken
-        });
+        // 백엔드 토큰이 없으면 로그인 실패
+        console.error('[3단계] ❌ 백엔드에서 토큰을 받아오지 못했습니다.');
+        console.error('[3단계] 백엔드 응답:', backendResponse);
+        console.error('[3단계] document.cookie:', document.cookie);
+        throw new Error('백엔드 인증에 실패했습니다. 토큰을 받아오지 못했습니다.');
       }
       
       localStorage.setItem('adminUsername', username);
