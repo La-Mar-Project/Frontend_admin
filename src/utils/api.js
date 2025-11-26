@@ -56,19 +56,29 @@ export const apiRequest = async (endpoint, options = {}) => {
   }
 
   // 옵션 병합 (options.headers가 있으면 우선 적용, 없으면 defaultHeaders 사용)
+  // 단, Authorization 헤더는 토큰이 있으면 항상 포함되도록 보장
+  const mergedHeaders = {
+    ...defaultHeaders,
+    ...options.headers, // options.headers가 있으면 defaultHeaders를 덮어씀
+  };
+  
+  // 토큰이 있으면 Authorization 헤더를 항상 설정 (다른 헤더에 의해 덮어써지지 않도록)
+  if (token) {
+    const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+    mergedHeaders['Authorization'] = authHeader;
+  }
+  
   const config = {
     ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers, // options.headers가 있으면 defaultHeaders를 덮어씀
-    },
+    headers: mergedHeaders,
   };
   
   // 디버깅: 최종 헤더 확인
   console.log('[API Request] 최종 헤더:', {
     'Content-Type': config.headers['Content-Type'],
     'Authorization': config.headers['Authorization'] ? config.headers['Authorization'].substring(0, 30) + '...' : '없음',
-    '모든 헤더 키': Object.keys(config.headers)
+    '모든 헤더 키': Object.keys(config.headers),
+    'Authorization 전체': config.headers['Authorization'] ? config.headers['Authorization'] : '없음'
   });
 
   try {

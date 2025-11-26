@@ -68,7 +68,13 @@ function Login() {
         if (response.ok) {
           // 응답 헤더에서 토큰 확인 (Authorization 헤더 또는 Set-Cookie 등)
           const responseHeaders = Object.fromEntries(response.headers.entries());
-          console.log('[2단계] 응답 헤더:', responseHeaders);
+          // 헤더 키를 소문자로 변환하여 확인 (대소문자 구분 없이)
+          const lowerCaseHeaders = {};
+          response.headers.forEach((value, key) => {
+            lowerCaseHeaders[key.toLowerCase()] = value;
+          });
+          console.log('[2단계] 응답 헤더 (원본):', responseHeaders);
+          console.log('[2단계] 응답 헤더 (소문자):', lowerCaseHeaders);
           
           // 응답 본문 확인
           const result = await response.json();
@@ -83,28 +89,57 @@ function Login() {
           });
           
           // 토큰 추출 (여러 가능한 위치에서 확인)
-          if (result.success && result.data) {
-            // 1. result.data.token
-            if (result.data.token) {
-              token = result.data.token;
-              console.log('[2단계] 토큰 위치: result.data.token');
-            }
-            // 2. result.data.accessToken
-            else if (result.data.accessToken) {
-              token = result.data.accessToken;
-              console.log('[2단계] 토큰 위치: result.data.accessToken');
-            }
-            // 3. result.token
-            else if (result.token) {
-              token = result.token;
-              console.log('[2단계] 토큰 위치: result.token');
-            }
-            // 4. 응답 헤더에서 확인
-            else if (responseHeaders['authorization']) {
-              const authHeader = responseHeaders['authorization'];
-              // "Bearer " 제거
-              token = authHeader.replace(/^Bearer\s+/i, '');
-              console.log('[2단계] 토큰 위치: 응답 헤더 Authorization');
+          console.log('[2단계] 토큰 추출 시작 - 응답 전체 구조:', JSON.stringify(result, null, 2));
+          
+          // 1. result.data.token
+          if (result.data && result.data.token) {
+            token = result.data.token;
+            console.log('[2단계] 토큰 위치: result.data.token');
+          }
+          // 2. result.data.accessToken
+          else if (result.data && result.data.accessToken) {
+            token = result.data.accessToken;
+            console.log('[2단계] 토큰 위치: result.data.accessToken');
+          }
+          // 3. result.data.access_token
+          else if (result.data && result.data.access_token) {
+            token = result.data.access_token;
+            console.log('[2단계] 토큰 위치: result.data.access_token');
+          }
+          // 4. result.token
+          else if (result.token) {
+            token = result.token;
+            console.log('[2단계] 토큰 위치: result.token');
+          }
+          // 5. result.accessToken
+          else if (result.accessToken) {
+            token = result.accessToken;
+            console.log('[2단계] 토큰 위치: result.accessToken');
+          }
+          // 6. result.access_token
+          else if (result.access_token) {
+            token = result.access_token;
+            console.log('[2단계] 토큰 위치: result.access_token');
+          }
+          // 7. 응답 헤더에서 확인 (Authorization 또는 X-Access-Token 등)
+          else if (lowerCaseHeaders['authorization']) {
+            const authHeader = lowerCaseHeaders['authorization'];
+            token = authHeader.replace(/^Bearer\s+/i, '');
+            console.log('[2단계] 토큰 위치: 응답 헤더 Authorization');
+          }
+          else if (lowerCaseHeaders['x-access-token']) {
+            token = lowerCaseHeaders['x-access-token'];
+            console.log('[2단계] 토큰 위치: 응답 헤더 X-Access-Token');
+          }
+          else if (lowerCaseHeaders['set-cookie']) {
+            // 쿠키에서 토큰 추출 시도
+            const cookies = lowerCaseHeaders['set-cookie'];
+            console.log('[2단계] 쿠키 확인:', cookies);
+            // 쿠키에서 access_token 또는 token 찾기
+            const cookieMatch = cookies.match(/(?:access_token|token)=([^;]+)/i);
+            if (cookieMatch) {
+              token = cookieMatch[1];
+              console.log('[2단계] 토큰 위치: 쿠키에서 추출');
             }
           }
           
@@ -132,7 +167,7 @@ function Login() {
         // 백엔드 토큰 요청 실패해도 로컬 인증이 성공했으면 계속 진행
       }
 
-      // 3. 토큰 저장 (백엔드 토큰이 있으면 사용, 없으면 로컬 토큰 생성)
+      // 3. 토큰 저장 (백엔드 토큰이 필수)
       console.log('[3단계] 토큰 저장 시작');
       if (token) {
         // 토큰에 "Bearer "가 포함되어 있으면 제거 (api.js에서 추가하므로)
@@ -141,16 +176,14 @@ function Login() {
         console.log('[3단계] 백엔드 토큰 저장 완료:', {
           저장된토큰: cleanToken.substring(0, 30) + '...',
           토큰길이: cleanToken.length,
+          토큰전체: cleanToken,
           localStorage확인: localStorage.getItem('adminToken')?.substring(0, 30) + '...'
         });
       } else {
-        // 백엔드 토큰이 없으면 로컬 토큰 생성
-        const localToken = btoa(`${username}:${Date.now()}`);
-        localStorage.setItem('adminToken', localToken);
-        console.log('[3단계] 로컬 토큰 생성 및 저장:', {
-          token: localToken.substring(0, 20) + '...',
-          tokenLength: localToken.length
-        });
+        // 백엔드 토큰이 없으면 로그인 실패
+        console.error('[3단계] 백엔드에서 토큰을 받아오지 못했습니다.');
+        console.error('[3단계] 백엔드 응답:', backendResponse);
+        throw new Error('백엔드 인증에 실패했습니다. 토큰을 받아오지 못했습니다.');
       }
       
       localStorage.setItem('adminUsername', username);
