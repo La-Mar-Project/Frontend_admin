@@ -87,24 +87,6 @@ html, body {
   transform-origin: left top !important;
 }
 
-/* 1440px 이상일 때 헤더 위치 (가운데 정렬된 레이아웃에 맞춤) */
-@media (min-width: 1440px) {
-  .header-responsive {
-    left: calc(50% - 720px + 256px) !important;
-    right: 0 !important;
-    width: auto !important;
-  }
-}
-
-/* 1440px 미만일 때 헤더 위치 */
-@media (max-width: 1439px) {
-  .header-responsive {
-    left: 256px !important;
-    right: 0 !important;
-    width: auto !important;
-  }
-}
-
 /* 푸터 - 전체 너비, 좌우 꽉 채움, 스크롤 가능 */
 .footer-responsive {
   position: relative !important;
