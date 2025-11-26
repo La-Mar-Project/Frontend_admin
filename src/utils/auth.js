@@ -26,8 +26,14 @@ const addAccessLog = (userId, type, status, name) => {
   localStorage.setItem('adminAccessLogs', JSON.stringify(logs));
 };
 
-// 로그인 처리
+// 로그인 처리 (접속 기록만 저장, 토큰은 절대 건드리지 않음)
+// ⚠️ 중요: 이 함수는 토큰을 절대 설정하거나 수정하지 않습니다.
+// 토큰 관리는 Login.jsx에서만 처리하며, 백엔드 JWT 토큰만 사용합니다.
 export const login = (username, password) => {
+  // 기존 백엔드 토큰 보호 (덮어쓰기 방지)
+  const existingToken = localStorage.getItem('adminToken');
+  const isBackendToken = existingToken && existingToken.length > 400 && existingToken.startsWith('eyJ');
+  
   let name = '';
   let loginSuccess = false;
 
@@ -35,15 +41,8 @@ export const login = (username, password) => {
   if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
     name = '관리자';
     loginSuccess = true;
-    // 백엔드에서 받은 토큰이 이미 있으면 덮어쓰지 않음
-    // 토큰이 없을 때만 로컬 토큰 생성 (백엔드 토큰 요청 실패 시 대비)
-    if (!localStorage.getItem('adminToken')) {
-      const token = btoa(`${username}:${Date.now()}`); // 간단한 토큰 생성
-      localStorage.setItem('adminToken', token);
-    }
-    // 사용자 정보는 항상 업데이트
-    localStorage.setItem('adminUsername', username);
-    localStorage.setItem('adminType', 'main'); // 메인 관리자 구분
+    // ⚠️ 토큰은 절대 설정하지 않음 - Login.jsx에서만 관리
+    // ⚠️ 사용자 정보도 절대 설정하지 않음 - Login.jsx에서만 관리
   } else {
     // 보조 관리자 계정 확인
     const assistantAuth = JSON.parse(localStorage.getItem('assistantAuth') || '{}');
@@ -53,16 +52,17 @@ export const login = (username, password) => {
       if (assistant.active === '활성' && assistant.password === password) {
         name = assistant.name || username;
         loginSuccess = true;
-        // 백엔드에서 받은 토큰이 이미 있으면 덮어쓰지 않음
-        if (!localStorage.getItem('adminToken')) {
-          const token = btoa(`${username}:${Date.now()}`);
-          localStorage.setItem('adminToken', token);
-        }
-        // 사용자 정보는 항상 업데이트
-        localStorage.setItem('adminUsername', username);
-        localStorage.setItem('adminType', 'assistant'); // 보조 관리자 구분
+        // ⚠️ 토큰은 절대 설정하지 않음 - Login.jsx에서만 관리
+        // ⚠️ 사용자 정보도 절대 설정하지 않음 - Login.jsx에서만 관리
       }
     }
+  }
+  
+  // 함수 종료 전 백엔드 토큰이 덮어씌워졌는지 확인 및 복원
+  const tokenAfterCheck = localStorage.getItem('adminToken');
+  if (isBackendToken && tokenAfterCheck !== existingToken) {
+    console.warn('[auth.js] ⚠️ 백엔드 토큰이 변경되었습니다. 복원합니다.');
+    localStorage.setItem('adminToken', existingToken);
   }
 
   // 로그인 시도 기록 (성공/실패 모두 기록)

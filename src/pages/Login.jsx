@@ -274,13 +274,61 @@ function Login() {
       });
       
       // 4. 로그인 성공 처리 (접속 기록 등)
+      // 백엔드 토큰 백업 (덮어쓰기 방지)
+      const savedBackendToken = localStorage.getItem('adminToken');
+      if (!savedBackendToken) {
+        throw new Error('백엔드 토큰이 없습니다. 로그인할 수 없습니다.');
+      }
+      
+      // 백엔드 JWT 토큰인지 확인 (JWT는 보통 400자 이상, eyJ로 시작)
+      const isJWTToken = savedBackendToken.length > 400 && savedBackendToken.startsWith('eyJ');
+      if (!isJWTToken) {
+        throw new Error('유효한 백엔드 토큰이 아닙니다. 로그인할 수 없습니다.');
+      }
+      
       console.log('[4단계] 로그인 성공 처리 시작');
+      console.log('[4단계] login() 호출 전 백엔드 토큰:', savedBackendToken.substring(0, 30) + '...', `(길이: ${savedBackendToken.length})`);
+      
       login(username, password);
+      
+      // login() 함수 호출 후 토큰 확인 및 강제 복원
+      const tokenAfterLogin = localStorage.getItem('adminToken');
+      console.log('[4단계] login() 호출 후 토큰:', tokenAfterLogin ? tokenAfterLogin.substring(0, 30) + '...' : '없음', tokenAfterLogin ? `(길이: ${tokenAfterLogin.length})` : '');
+      
+      // 로컬 토큰 감지 함수 (짧은 길이 + base64 형식)
+      const isLocalToken = (token) => {
+        if (!token) return false;
+        // 로컬 토큰은 보통 20-50자 정도이고, base64 인코딩된 username:timestamp 형태
+        // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
+        return token.length < 400 || !token.startsWith('eyJ');
+      };
+      
+      // 토큰이 덮어씌워졌거나 로컬 토큰이면 무조건 백엔드 토큰으로 복원
+      if (savedBackendToken !== tokenAfterLogin || isLocalToken(tokenAfterLogin)) {
+        console.error('[4단계] ❌ 토큰이 로컬 토큰으로 덮어씌워졌습니다!');
+        console.error('[4단계] 원래 백엔드 토큰:', savedBackendToken.substring(0, 30) + '...', `(길이: ${savedBackendToken.length})`);
+        console.error('[4단계] 현재 토큰:', tokenAfterLogin ? tokenAfterLogin.substring(0, 30) + '...' : '없음', tokenAfterLogin ? `(길이: ${tokenAfterLogin.length})` : '');
+        localStorage.setItem('adminToken', savedBackendToken);
+        console.log('[4단계] ✅ 백엔드 토큰으로 강제 복원 완료');
+      }
+      
+      // 최종 확인: 백엔드 토큰이 아니면 로그인 실패
+      const finalToken = localStorage.getItem('adminToken');
+      if (!finalToken || isLocalToken(finalToken)) {
+        console.error('[4단계] ❌ 최종 토큰 확인 실패: 백엔드 토큰이 아닙니다.');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+        throw new Error('백엔드 토큰으로 로그인할 수 없습니다. 다시 시도해주세요.');
+      }
+      
       console.log('[4단계] 접속 기록 저장 완료');
       
       console.log('=== [로그인 완료] ===');
       console.log('최종 저장된 데이터:', {
-        adminToken: localStorage.getItem('adminToken')?.substring(0, 20) + '...',
+        adminToken: finalToken.substring(0, 30) + '...',
+        adminToken전체길이: finalToken.length,
+        adminToken타입: '백엔드 JWT 토큰',
         adminUsername: localStorage.getItem('adminUsername'),
         adminType: localStorage.getItem('adminType')
       });
