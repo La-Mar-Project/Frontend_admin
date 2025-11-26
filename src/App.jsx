@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
-import Home from './pages/Home';
 import CompanyInfo from './pages/CompanyInfo';
 import Dashboard from './pages/Dashboard';
 import AssistantManager from './pages/AssistantManager';
@@ -23,12 +22,11 @@ function App() {
         <Route 
           path="/" 
           element={
-            isAuthenticated() ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />
+            isAuthenticated() ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
           } 
         />
         
         {/* 보호된 라우트들 */}
-        <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
         <Route path="/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/assistant-manager" element={<ProtectedRoute><AssistantManager /></ProtectedRoute>} />

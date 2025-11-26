@@ -15,7 +15,7 @@ function Login() {
     const success = login(username, password);
     
     if (success) {
-      navigate('/home');
+      navigate('/dashboard');
     } else {
       setError('아이디 또는 비밀번호가 일치하지 않습니다.');
       setPassword('');
