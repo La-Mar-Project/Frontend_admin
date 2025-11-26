@@ -31,8 +31,8 @@ function Header() {
   };
 
   return (
-    <header className="fixed top-0 h-[58px] bg-[#FFFFFF] z-40 flex items-center header-responsive" style={{ paddingLeft: '42px', paddingRight: '42px' }}>
-      <p className="font-medium leading-[28px] text-[#73757c] text-[20px] whitespace-nowrap">
+    <header className="fixed top-0 bg-[#FFFFFF] z-40 flex items-center header-responsive" style={{ paddingLeft: '0px', paddingRight: '42px', height: '58px' }}>
+      <p className="font-medium leading-[28px] text-[#73757c] text-[20px] whitespace-nowrap" style={{ marginLeft: '42px' }}>
         <span className="font-bold">{currentUser}</span>님 좋은 하루 되세요!
       </p>
       <p className="font-medium leading-[28px] text-[20px] text-[#73757c] whitespace-nowrap" style={{ marginLeft: '50px' }}>

@@ -445,7 +445,7 @@ function ReservationManagement() {
 
   return (
     <Layout>
-      <div className="flex flex-col items-start gap-[26px] px-[42px] py-[26px] pb-[300px]">
+      <div className="flex flex-col items-start gap-[26px] px-[42px] py-[26px]">
         <div className="flex flex-col items-start gap-[10px] w-full mx-auto">
           <div className="flex flex-col items-start gap-[10px] rounded-[20px] bg-[#F7F8FC] px-[60px] py-[40px] title-section">
             <h1 className="text-[30px] font-bold text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
@@ -716,47 +716,47 @@ function ReservationManagement() {
               <div className="flex flex-col items-start w-[986px]">
                 {/* 테이블 헤더 */}
                 <div className="flex items-center self-stretch">
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[66px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[66px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
                     <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>
                       선택
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[96px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       출항일
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[180px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       예약자 정보
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       배 정보
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[120px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       총 금액
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[250px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       예약자 메모
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       예약상태
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
-                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[160px] min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                    <span className="text-[16px] font-medium text-[#272C3C] whitespace-normal text-center break-words" style={{ fontFamily: 'Pretendard' }}>
                       입금정보
                     </span>
                   </div>
-                  <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[45px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
+                  <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] flex-1 min-h-[48px] border-2 border-[#DFE7F4] bg-[#EEF4FF]">
                     <span className="text-[16px] font-medium text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>
                       쿠폰
                     </span>
@@ -778,72 +778,67 @@ function ReservationManagement() {
                   </div>
                 ) : (
                   reservations.map((row) => (
-                  <div key={row.id} className="flex items-center self-stretch">
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] w-[66px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <div className="flex items-center gap-[10px] p-[10px]">
-                        <svg 
-                          width="44" 
-                          height="44" 
-                          viewBox="0 0 44 44" 
-                          fill="none" 
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="cursor-pointer"
-                          onClick={() => handleRowSelect(row.id)}
-                        >
-                          <path 
-                            d="M16 10.5H28C31.0376 10.5 33.5 12.9624 33.5 16V28C33.5 31.0376 31.0376 33.5 28 33.5H16C12.9624 33.5 10.5 31.0376 10.5 28V16C10.5 12.9624 12.9624 10.5 16 10.5Z" 
-                              fill={selectedRows.has(row.id) ? '#1840B8' : 'white'}
-                            stroke="#1840B8"
-                          />
-                            {selectedRows.has(row.id) && (
-                              <path d="M19 22L22 25L27 18" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            )}
-                        </svg>
-                      </div>
+                  <div key={row.id} className="flex items-start self-stretch">
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[66px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <svg 
+                        width="24" 
+                        height="24" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="cursor-pointer"
+                        onClick={() => handleRowSelect(row.id)}
+                      >
+                        <rect x="4" y="4" width="16" height="16" rx="2" fill={selectedRows.has(row.id) ? '#1840B8' : 'white'} stroke="#1840B8" strokeWidth="2"/>
+                        {selectedRows.has(row.id) && (
+                          <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        )}
+                      </svg>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[96px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[96px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
                         {row.date}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[146px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
-                          {`${row.name}(${row.headCount}) ${row.phone}`}
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[180px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
+                        {`${row.name}(${row.headCount}) ${row.phone}`}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
                         {row.boat}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[92px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[120px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
                         {row.amount}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[220px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[250px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
                         {row.memo}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[89px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
                         {row.status}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[20px] py-[12px] w-[138px] h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[160px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
+                      <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
                         {row.payment}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[12px] py-[12px] flex-1 h-[48px] border-2 border-[#DFE7F4] bg-white">
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] flex-1 min-h-[48px] border-2 border-[#DFE7F4] bg-white">
                         <svg 
-                          width="52" 
-                          height="50" 
+                          width="32" 
+                          height="32" 
                           viewBox="0 0 52 50" 
                           fill="none" 
                           xmlns="http://www.w3.org/2000/svg"
                           className="cursor-pointer hover:opacity-80 transition-opacity"
+                          style={{ width: '32px', height: '32px' }}
                           onClick={() => {
                             // reservationPublicId 또는 id를 사용
                             const reservationId = row.reservationPublicId || row.id;

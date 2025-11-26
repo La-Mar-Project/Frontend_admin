@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
-import { apiGet, apiPut } from '../utils/api';
 
 function CompanyInfo() {
+  // 로컬 스토리지 키
+  const STORAGE_KEY = 'companyInfo';
+  
   // 연락처 상태 관리
   const [contacts, setContacts] = useState({
     representative: { part1: '010', part2: '0000', part3: '0000' },
@@ -20,21 +22,18 @@ function CompanyInfo() {
   // debounce를 위한 타이머 ref
   const saveTimerRef = useRef(null);
 
-  // 자동 저장 함수
-  const saveCompanyInfo = async () => {
+  // 로컬 스토리지에 저장하는 함수
+  const saveToLocalStorage = () => {
     try {
-      const response = await apiPut('/api/merchants/stores', {
+      const dataToSave = {
         contacts,
-        banks
-      });
-
-      if (response.ok) {
-        console.log('회사정보가 저장되었습니다.');
-      } else {
-        console.error('저장 실패:', response.statusText);
-      }
+        banks,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+      console.log('회사정보가 로컬 스토리지에 저장되었습니다.');
     } catch (error) {
-      console.error('저장 중 오류 발생:', error);
+      console.error('로컬 스토리지 저장 중 오류 발생:', error);
     }
   };
 
@@ -44,8 +43,8 @@ function CompanyInfo() {
       clearTimeout(saveTimerRef.current);
     }
     saveTimerRef.current = setTimeout(() => {
-      saveCompanyInfo();
-    }, 1000); // 1초 후 저장
+      saveToLocalStorage();
+    }, 500); // 0.5초 후 저장
   };
 
   // 연락처 업데이트 함수
@@ -74,31 +73,28 @@ function CompanyInfo() {
     debouncedSave();
   };
 
-  // 컴포넌트 마운트 시 데이터 로드
+  // 컴포넌트 마운트 시 로컬 스토리지에서 데이터 로드
   useEffect(() => {
-    const loadCompanyInfo = async () => {
-      try {
-        const response = await apiGet('/api/merchants/stores');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.contacts) {
-            setContacts(data.contacts);
-          }
-          if (data.banks) {
-            setBanks(data.banks);
-          }
+    try {
+      const savedData = localStorage.getItem(STORAGE_KEY);
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        if (parsedData.contacts) {
+          setContacts(parsedData.contacts);
         }
-      } catch (error) {
-        console.error('데이터 로드 중 오류 발생:', error);
+        if (parsedData.banks) {
+          setBanks(parsedData.banks);
+        }
+        console.log('로컬 스토리지에서 회사정보를 불러왔습니다.');
       }
-    };
-
-    loadCompanyInfo();
+    } catch (error) {
+      console.error('로컬 스토리지에서 데이터 로드 중 오류 발생:', error);
+    }
   }, []);
 
   return (
     <Layout>
-      <div className="px-[42px] py-[26px] pb-[300px] flex flex-col gap-[26px] w-full">
+      <div className="px-[42px] py-[26px] flex flex-col gap-[26px] w-full">
         {/* 회사정보 헤더 카드 */}
         <div className="flex flex-col gap-[10px] w-full mx-auto">
           <div className="flex flex-col gap-[10px] px-[60px] py-[40px] rounded-[20px] bg-[#f7f8fc] shadow-[0px_4px_4px_0px_rgba(39,84,218,0.2)] title-section">
@@ -141,13 +137,13 @@ function CompanyInfo() {
             {/* 우측 입력 ���드 */}
             <div className="flex flex-col w-[493px]">
               {/* 대표자 연락처 */}
-              <div className="flex h-[62px] px-[105px] py-[10px] justify-center items-center rounded-tr-[10px] border-2 border-[#dfe7f4] bg-white opacity-93">
+              <div className="flex h-[62px] px-[20px] py-[10px] justify-center items-center rounded-tr-[10px] border-2 border-[#dfe7f4] bg-white opacity-93 gap-[8px]">
                 <input
                   type="text"
                   maxLength="3"
                   value={contacts.representative.part1}
                   onChange={(e) => updateContact('representative', 'part1', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[60px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[80px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -158,7 +154,7 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.representative.part2}
                   onChange={(e) => updateContact('representative', 'part2', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -169,19 +165,19 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.representative.part3}
                   onChange={(e) => updateContact('representative', 'part3', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
               </div>
 
               {/* 발송 연락처 */}
-              <div className="flex h-[62px] px-[105px] py-[10px] justify-center items-center border-2 border-[#dfe7f4] bg-white opacity-93">
+              <div className="flex h-[62px] px-[20px] py-[10px] justify-center items-center border-2 border-[#dfe7f4] bg-white opacity-93 gap-[8px]">
                 <input
                   type="text"
                   maxLength="3"
                   value={contacts.sending.part1}
                   onChange={(e) => updateContact('sending', 'part1', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[60px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[80px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -192,7 +188,7 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.sending.part2}
                   onChange={(e) => updateContact('sending', 'part2', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -203,19 +199,19 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.sending.part3}
                   onChange={(e) => updateContact('sending', 'part3', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
               </div>
 
               {/* 알리미 연락처 */}
-              <div className="flex h-[62px] px-[105px] py-[10px] justify-center items-center rounded-br-[10px] border-2 border-[#dfe7f4] bg-white opacity-93">
+              <div className="flex h-[62px] px-[20px] py-[10px] justify-center items-center rounded-br-[10px] border-2 border-[#dfe7f4] bg-white opacity-93 gap-[8px]">
                 <input
                   type="text"
                   maxLength="3"
                   value={contacts.notifier.part1}
                   onChange={(e) => updateContact('notifier', 'part1', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[60px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[80px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -226,7 +222,7 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.notifier.part2}
                   onChange={(e) => updateContact('notifier', 'part2', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
                 <div className="flex flex-col px-[6px] py-0 justify-center items-center">
@@ -237,7 +233,7 @@ function CompanyInfo() {
                   maxLength="4"
                   value={contacts.notifier.part3}
                   onChange={(e) => updateContact('notifier', 'part3', e.target.value)}
-                  className="flex px-[14px] py-[5px] w-[70px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
+                  className="flex px-[14px] py-[5px] w-[90px] text-center rounded-[12px] border-2 border-[#dfe7f4] text-[20px] font-normal leading-normal text-[#272c3c] focus:outline-none focus:border-[#1840b8]"
                   style={{ fontFamily: 'Pretendard' }}
                 />
               </div>

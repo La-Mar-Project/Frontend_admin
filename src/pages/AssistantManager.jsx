@@ -179,7 +179,7 @@ function AssistantManager() {
 
   return (
     <Layout>
-      <div className="flex flex-col gap-[26px] px-[42px] py-[26px] pb-[300px]">
+      <div className="flex flex-col gap-[26px] px-[42px] py-[26px]">
         <div className="flex flex-col gap-[10px] w-full mx-auto">
           <div 
             className="flex flex-col gap-[10px] px-[60px] py-[40px] rounded-[20px] title-section" 

@@ -354,8 +354,8 @@ function ShipInfo() {
 
   return (
     <Layout>
-      <div className="flex w-full max-w-[1183px] pb-[240px] flex-col items-start bg-white mx-auto" style={{ minHeight: '1679px' }}>
-        <div className="flex w-full max-w-[1119px] pb-[300px] flex-col items-start gap-[26px] mx-auto" style={{ minHeight: '1381px' }}>
+      <div className="flex w-full max-w-[1183px] flex-col items-start bg-white mx-auto" style={{ minHeight: '1679px' }}>
+        <div className="flex w-full max-w-[1119px] flex-col items-start gap-[26px] mx-auto" style={{ minHeight: '1381px' }}>
           <div className="flex pl-[42px] flex-col items-start gap-[10px] self-stretch">
             <div className="flex w-full mx-auto px-[60px] py-[40px] flex-col justify-center items-start gap-[10px] rounded-[20px] title-section" 
                  style={{ background: 'rgba(247, 248, 252, 1)', boxShadow: '0 4px 4px 0 rgba(39, 84, 218, 0.2)' }}>

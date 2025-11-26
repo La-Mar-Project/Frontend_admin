@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Home from './pages/Home';
-import SMSManagement from './pages/SMSManagement';
 import CompanyInfo from './pages/CompanyInfo';
 import Dashboard from './pages/Dashboard';
 import AssistantManager from './pages/AssistantManager';
@@ -9,7 +8,6 @@ import AdminLog from './pages/AdminLog';
 import ShipInfo from './pages/ShipInfo';
 import ReservationCalendar from './pages/ReservationCalendar';
 import ReservationManagement from './pages/ReservationManagement';
-import PreReservationCoupon from './pages/PreReservationCoupon';
 import SMSHistory from './pages/SMSHistory';
 import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './utils/auth';
@@ -31,7 +29,6 @@ function App() {
         
         {/* 보호된 라우트들 */}
         <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/sms" element={<ProtectedRoute><SMSManagement /></ProtectedRoute>} />
         <Route path="/company-info" element={<ProtectedRoute><CompanyInfo /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/assistant-manager" element={<ProtectedRoute><AssistantManager /></ProtectedRoute>} />
@@ -39,7 +36,6 @@ function App() {
         <Route path="/ship-info" element={<ProtectedRoute><ShipInfo /></ProtectedRoute>} />
         <Route path="/reservation-calendar" element={<ProtectedRoute><ReservationCalendar /></ProtectedRoute>} />
         <Route path="/reservation-management" element={<ProtectedRoute><ReservationManagement /></ProtectedRoute>} />
-        <Route path="/pre-reservation-coupon" element={<ProtectedRoute><PreReservationCoupon /></ProtectedRoute>} />
         <Route path="/sms-history" element={<ProtectedRoute><SMSHistory /></ProtectedRoute>} />
       </Routes>
     </Router>

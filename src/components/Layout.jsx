@@ -7,23 +7,28 @@ function Layout({ children }) {
     <>
       <Sidebar />
       <Header />
-      <Footer />
-      <div className="w-full h-screen bg-white overflow-hidden layout-container" style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start', height: '100vh' }}>
-        <div className="relative bg-white layout-wrapper">
-          {/* 메인 콘텐츠 영역 */}
-          <main 
-            className="bg-[#FFFFFF] overflow-y-auto"
-            style={{ 
-              marginLeft: '256px',
-              marginTop: '58px',
-              marginBottom: '161px',
-              height: 'calc(100vh - 58px - 161px)',
-              minHeight: 'calc(100vh - 58px - 161px)'
-            }}
-          >
+      <div className="bg-white layout-container" style={{ position: 'relative', width: '1440px', minWidth: '1440px', minHeight: '100vh', margin: 0, padding: 0 }}>
+        {/* 메인 콘텐츠 영역 */}
+        <main 
+          className="bg-[#FFFFFF] flex flex-col"
+          style={{ 
+            marginLeft: '256px',
+            marginTop: '58px',
+            minHeight: 'calc(100vh - 58px)',
+            width: 'calc(1440px - 256px)'
+          }}
+        >
+          <div className="flex-1 pb-0 w-full">
             {children}
-          </main>
-        </div>
+          </div>
+          {/* 푸터 - 메인 콘텐츠 하단에 배치, 전체 너비 차지 */}
+          <div className="footer-wrapper" style={{ 
+            width: '100vw',
+            flexShrink: 0
+          }}>
+            <Footer />
+          </div>
+        </main>
       </div>
     </>
   );
