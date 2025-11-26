@@ -11,7 +11,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "download-assets": "node download-assets.js"
+    "download-assets": "node download-assets.js",
+    "postinstall": "npm uninstall node-sass 2>/dev/null || true"
   },
   "dependencies": {
     "react": "^19.2.0",
