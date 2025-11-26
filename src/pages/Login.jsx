@@ -66,6 +66,11 @@ function Login() {
         });
 
         if (response.ok) {
+          // 응답 헤더에서 토큰 확인 (Authorization 헤더 또는 Set-Cookie 등)
+          const responseHeaders = Object.fromEntries(response.headers.entries());
+          console.log('[2단계] 응답 헤더:', responseHeaders);
+          
+          // 응답 본문 확인
           const result = await response.json();
           backendResponse = result;
           console.log('[2단계] 백엔드 응답 데이터:', result);
@@ -73,20 +78,54 @@ function Login() {
             success: result.success,
             hasData: !!result.data,
             hasToken: !!(result.data && result.data.token),
-            dataKeys: result.data ? Object.keys(result.data) : []
+            dataKeys: result.data ? Object.keys(result.data) : [],
+            전체응답키: Object.keys(result)
           });
           
-          if (result.success && result.data && result.data.token) {
-            token = result.data.token;
+          // 토큰 추출 (여러 가능한 위치에서 확인)
+          if (result.success && result.data) {
+            // 1. result.data.token
+            if (result.data.token) {
+              token = result.data.token;
+              console.log('[2단계] 토큰 위치: result.data.token');
+            }
+            // 2. result.data.accessToken
+            else if (result.data.accessToken) {
+              token = result.data.accessToken;
+              console.log('[2단계] 토큰 위치: result.data.accessToken');
+            }
+            // 3. result.token
+            else if (result.token) {
+              token = result.token;
+              console.log('[2단계] 토큰 위치: result.token');
+            }
+            // 4. 응답 헤더에서 확인
+            else if (responseHeaders['authorization']) {
+              const authHeader = responseHeaders['authorization'];
+              // "Bearer " 제거
+              token = authHeader.replace(/^Bearer\s+/i, '');
+              console.log('[2단계] 토큰 위치: 응답 헤더 Authorization');
+            }
+          }
+          
+          if (token) {
+            // 토큰에 "Bearer "가 포함되어 있으면 제거 (api.js에서 추가하므로)
+            token = token.replace(/^Bearer\s+/i, '');
             console.log('[2단계] 백엔드 토큰 받음:', {
-              token: token.substring(0, 20) + '...',
-              tokenLength: token.length
+              token: token.substring(0, 30) + '...',
+              tokenLength: token.length,
+              token전체: token
             });
           } else {
             console.warn('[2단계] 백엔드 응답에 토큰이 없음:', result);
           }
         } else {
-          console.warn('[2단계] 백엔드 응답 실패:', response.status, response.statusText);
+          const errorText = await response.text().catch(() => '');
+          console.warn('[2단계] 백엔드 응답 실패:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText: errorText.substring(0, 200)
+          });
         }
       } catch (apiError) {
         console.warn('[2단계] 백엔드 토큰 요청 실패 (로컬 인증으로 진행):', apiError);
@@ -96,8 +135,14 @@ function Login() {
       // 3. 토큰 저장 (백엔드 토큰이 있으면 사용, 없으면 로컬 토큰 생성)
       console.log('[3단계] 토큰 저장 시작');
       if (token) {
-        localStorage.setItem('adminToken', token);
-        console.log('[3단계] 백엔드 토큰 저장 완료');
+        // 토큰에 "Bearer "가 포함되어 있으면 제거 (api.js에서 추가하므로)
+        const cleanToken = token.replace(/^Bearer\s+/i, '');
+        localStorage.setItem('adminToken', cleanToken);
+        console.log('[3단계] 백엔드 토큰 저장 완료:', {
+          저장된토큰: cleanToken.substring(0, 30) + '...',
+          토큰길이: cleanToken.length,
+          localStorage확인: localStorage.getItem('adminToken')?.substring(0, 30) + '...'
+        });
       } else {
         // 백엔드 토큰이 없으면 로컬 토큰 생성
         const localToken = btoa(`${username}:${Date.now()}`);
@@ -111,10 +156,14 @@ function Login() {
       localStorage.setItem('adminUsername', username);
       localStorage.setItem('adminType', isLocalAuth ? 'main' : 'assistant');
       
+      // 저장된 토큰 확인
+      const savedToken = localStorage.getItem('adminToken');
       console.log('[3단계] 저장된 사용자 정보:', {
         username: localStorage.getItem('adminUsername'),
         adminType: localStorage.getItem('adminType'),
-        hasToken: !!localStorage.getItem('adminToken')
+        hasToken: !!savedToken,
+        저장된토큰: savedToken ? savedToken.substring(0, 30) + '...' : '없음',
+        토큰전체: savedToken
       });
       
       // 4. 로그인 성공 처리 (접속 기록 등)
