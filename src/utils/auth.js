@@ -26,8 +26,14 @@ const addAccessLog = (userId, type, status, name) => {
   localStorage.setItem('adminAccessLogs', JSON.stringify(logs));
 };
 
-// 로그인 처리
+// 로그인 처리 (접속 기록만 저장, 토큰은 절대 건드리지 않음)
+// ⚠️ 중요: 이 함수는 토큰을 절대 설정하거나 수정하지 않습니다.
+// 토큰 관리는 Login.jsx에서만 처리하며, 백엔드 JWT 토큰만 사용합니다.
 export const login = (username, password) => {
+  // 기존 백엔드 토큰 보호 (덮어쓰기 방지)
+  const existingToken = localStorage.getItem('adminToken');
+  const isBackendToken = existingToken && existingToken.length > 400 && existingToken.startsWith('eyJ');
+  
   let name = '';
   let loginSuccess = false;
 
@@ -35,11 +41,8 @@ export const login = (username, password) => {
   if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
     name = '관리자';
     loginSuccess = true;
-    // 로그인 성공 시 토큰을 localStorage에 저장
-    const token = btoa(`${username}:${Date.now()}`); // 간단한 토큰 생성
-    localStorage.setItem('adminToken', token);
-    localStorage.setItem('adminUsername', username);
-    localStorage.setItem('adminType', 'main'); // 메인 관리자 구분
+    // ⚠️ 토큰은 절대 설정하지 않음 - Login.jsx에서만 관리
+    // ⚠️ 사용자 정보도 절대 설정하지 않음 - Login.jsx에서만 관리
   } else {
     // 보조 관리자 계정 확인
     const assistantAuth = JSON.parse(localStorage.getItem('assistantAuth') || '{}');
@@ -49,12 +52,17 @@ export const login = (username, password) => {
       if (assistant.active === '활성' && assistant.password === password) {
         name = assistant.name || username;
         loginSuccess = true;
-        const token = btoa(`${username}:${Date.now()}`);
-        localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminUsername', username);
-        localStorage.setItem('adminType', 'assistant'); // 보조 관리자 구분
+        // ⚠️ 토큰은 절대 설정하지 않음 - Login.jsx에서만 관리
+        // ⚠️ 사용자 정보도 절대 설정하지 않음 - Login.jsx에서만 관리
       }
     }
+  }
+  
+  // 함수 종료 전 백엔드 토큰이 덮어씌워졌는지 확인 및 복원
+  const tokenAfterCheck = localStorage.getItem('adminToken');
+  if (isBackendToken && tokenAfterCheck !== existingToken) {
+    console.warn('[auth.js] ⚠️ 백엔드 토큰이 변경되었습니다. 복원합니다.');
+    localStorage.setItem('adminToken', existingToken);
   }
 
   // 로그인 시도 기록 (성공/실패 모두 기록)
@@ -110,10 +118,29 @@ export const logout = () => {
   localStorage.removeItem('adminType');
 };
 
-// 로그인 여부 확인
+// 로컬 토큰 감지 함수
+const isLocalToken = (token) => {
+  if (!token) return false;
+  // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
+  // 로컬 토큰은 짧고 base64 인코딩된 username:timestamp 형태
+  return token.length < 400 || !token.startsWith('eyJ');
+};
+
+// 로그인 여부 확인 (백엔드 토큰만 허용)
 export const isAuthenticated = () => {
   const token = localStorage.getItem('adminToken');
-  return !!token;
+  if (!token) return false;
+  
+  // 로컬 토큰이면 제거하고 false 반환
+  if (isLocalToken(token)) {
+    console.warn('[auth.js] 로컬 토큰이 감지되었습니다. 제거합니다.');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
+    localStorage.removeItem('adminType');
+    return false;
+  }
+  
+  return true;
 };
 
 // 현재 사용자 정보 가져오기

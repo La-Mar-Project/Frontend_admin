@@ -24,6 +24,25 @@ function Dashboard() {
     lastMonthRevenue: null // 월간 매출 (지난달)
   });
 
+  // 페이지 로드 시 로컬 토큰 확인 및 제거
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      // 로컬 토큰 감지 (400자 미만이거나 eyJ로 시작하지 않으면 로컬 토큰)
+      const isLocal = token.length < 400 || !token.startsWith('eyJ');
+      if (isLocal) {
+        console.error('[Dashboard] ❌ 로컬 토큰이 감지되었습니다! 제거합니다.');
+        console.error('[Dashboard] 로컬 토큰:', token.substring(0, 50), `(길이: ${token.length})`);
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+        console.warn('[Dashboard] ⚠️ 로컬 토큰을 제거했습니다. 로그인 페이지로 이동합니다.');
+        window.location.href = '/login';
+        return;
+      }
+    }
+  }, []);
+
   // API에서 대시보드 데이터 불러오기
   useEffect(() => {
     const fetchDashboardData = async () => {

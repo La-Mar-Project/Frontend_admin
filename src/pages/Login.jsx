@@ -83,6 +83,8 @@ function Login() {
           console.log('[2단계] 모든 헤더 키:', allHeaderKeys);
           
           // Set-Cookie 헤더 확인 (배열일 수 있음)
+          // 참고: 백엔드가 쿠키가 아닌 응답 헤더의 'authorization' 필드로 토큰을 보내므로
+          // Set-Cookie가 없어도 정상입니다.
           const setCookieHeader = response.headers.get('Set-Cookie') || response.headers.get('set-cookie');
           const setCookieArray = response.headers.getSetCookie ? response.headers.getSetCookie() : [];
           console.log('[2단계] Set-Cookie 헤더 확인:', {
@@ -90,15 +92,18 @@ function Login() {
             'Set-Cookie (get)': setCookieHeader,
             'Set-Cookie (배열)': setCookieArray,
             'getSetCookie() 사용 가능': !!response.headers.getSetCookie,
-            모든SetCookie: allHeaderKeys.filter(k => k.toLowerCase().includes('cookie'))
+            모든SetCookie: allHeaderKeys.filter(k => k.toLowerCase().includes('cookie')),
+            '참고': '백엔드가 헤더의 authorization 필드로 토큰을 보내므로 쿠키가 없어도 정상입니다.'
           });
           
           // document.cookie 확인 (브라우저에 저장된 쿠키)
-          console.log('[2단계] 브라우저 쿠키 (document.cookie):', document.cookie);
+          // 참고: 백엔드가 쿠키를 사용하지 않으므로 비어있어도 정상입니다.
+          console.log('[2단계] 브라우저 쿠키 (document.cookie):', document.cookie || '(비어있음 - 정상: 백엔드가 쿠키를 사용하지 않음)');
           console.log('[2단계] 쿠키 상세 분석:', {
             쿠키존재: !!document.cookie,
-            쿠키길이: document.cookie.length,
-            쿠키분할: document.cookie ? document.cookie.split(';') : []
+            쿠키길이: document.cookie ? document.cookie.length : 0,
+            쿠키분할: document.cookie ? document.cookie.split(';') : [],
+            '참고': '백엔드가 응답 헤더의 authorization 필드로 토큰을 보내므로 쿠키가 없어도 정상입니다.'
           });
           
           // 응답 본문 확인
@@ -269,17 +274,100 @@ function Login() {
       });
       
       // 4. 로그인 성공 처리 (접속 기록 등)
+      // 백엔드 토큰 백업 (덮어쓰기 방지)
+      const savedBackendToken = localStorage.getItem('adminToken');
+      if (!savedBackendToken) {
+        throw new Error('백엔드 토큰이 없습니다. 로그인할 수 없습니다.');
+      }
+      
+      // 백엔드 JWT 토큰인지 확인 (JWT는 보통 400자 이상, eyJ로 시작)
+      const isJWTToken = savedBackendToken.length > 400 && savedBackendToken.startsWith('eyJ');
+      if (!isJWTToken) {
+        throw new Error('유효한 백엔드 토큰이 아닙니다. 로그인할 수 없습니다.');
+      }
+      
       console.log('[4단계] 로그인 성공 처리 시작');
+      console.log('[4단계] login() 호출 전 백엔드 토큰:', savedBackendToken.substring(0, 30) + '...', `(길이: ${savedBackendToken.length})`);
+      
       login(username, password);
+      
+      // login() 함수 호출 후 토큰 확인 및 강제 복원
+      const tokenAfterLogin = localStorage.getItem('adminToken');
+      console.log('[4단계] login() 호출 후 토큰:', tokenAfterLogin ? tokenAfterLogin.substring(0, 30) + '...' : '없음', tokenAfterLogin ? `(길이: ${tokenAfterLogin.length})` : '');
+      
+      // 로컬 토큰 감지 함수 (짧은 길이 + base64 형식)
+      const isLocalToken = (token) => {
+        if (!token) return false;
+        // 로컬 토큰은 보통 20-50자 정도이고, base64 인코딩된 username:timestamp 형태
+        // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
+        return token.length < 400 || !token.startsWith('eyJ');
+      };
+      
+      // 토큰이 덮어씌워졌거나 로컬 토큰이면 무조건 백엔드 토큰으로 복원
+      if (savedBackendToken !== tokenAfterLogin || isLocalToken(tokenAfterLogin)) {
+        console.error('[4단계] ❌ 토큰이 로컬 토큰으로 덮어씌워졌습니다!');
+        console.error('[4단계] 원래 백엔드 토큰:', savedBackendToken.substring(0, 30) + '...', `(길이: ${savedBackendToken.length})`);
+        console.error('[4단계] 현재 토큰:', tokenAfterLogin ? tokenAfterLogin.substring(0, 30) + '...' : '없음', tokenAfterLogin ? `(길이: ${tokenAfterLogin.length})` : '');
+        localStorage.setItem('adminToken', savedBackendToken);
+        console.log('[4단계] ✅ 백엔드 토큰으로 강제 복원 완료');
+      }
+      
+      // 최종 확인: 백엔드 토큰이 아니면 로그인 실패
+      const finalToken = localStorage.getItem('adminToken');
+      if (!finalToken || isLocalToken(finalToken)) {
+        console.error('[4단계] ❌ 최종 토큰 확인 실패: 백엔드 토큰이 아닙니다.');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+        throw new Error('백엔드 토큰으로 로그인할 수 없습니다. 다시 시도해주세요.');
+      }
+      
       console.log('[4단계] 접속 기록 저장 완료');
       
       console.log('=== [로그인 완료] ===');
       console.log('최종 저장된 데이터:', {
-        adminToken: localStorage.getItem('adminToken')?.substring(0, 20) + '...',
+        adminToken: finalToken.substring(0, 30) + '...',
+        adminToken전체길이: finalToken.length,
+        adminToken타입: '백엔드 JWT 토큰',
         adminUsername: localStorage.getItem('adminUsername'),
         adminType: localStorage.getItem('adminType')
       });
       
+      // 페이지 이동 전 마지막 확인: 백엔드 토큰이 아니면 로그인 실패
+      let tokenBeforeNavigate = localStorage.getItem('adminToken');
+      
+      // 로컬 토큰이면 백엔드 토큰으로 강제 복원
+      if (tokenBeforeNavigate && isLocalToken(tokenBeforeNavigate)) {
+        console.error('[로그인 완료] ❌ 페이지 이동 전 로컬 토큰 감지! 백엔드 토큰으로 복원합니다.');
+        console.error('[로그인 완료] 로컬 토큰:', tokenBeforeNavigate.substring(0, 50), `(길이: ${tokenBeforeNavigate.length})`);
+        if (savedBackendToken) {
+          localStorage.setItem('adminToken', savedBackendToken);
+          tokenBeforeNavigate = savedBackendToken;
+          console.log('[로그인 완료] ✅ 백엔드 토큰으로 복원 완료');
+        } else {
+          console.error('[로그인 완료] ❌ 백엔드 토큰이 없습니다. 로그인 실패');
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUsername');
+          localStorage.removeItem('adminType');
+          throw new Error('백엔드 토큰이 유지되지 않았습니다. 다시 로그인해주세요.');
+        }
+      }
+      
+      // 최종 확인: 백엔드 토큰이 아니면 로그인 실패
+      if (!tokenBeforeNavigate || isLocalToken(tokenBeforeNavigate)) {
+        console.error('[로그인 완료] ❌ 최종 토큰 확인 실패: 백엔드 토큰이 아닙니다.');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+        throw new Error('백엔드 토큰이 유지되지 않았습니다. 다시 로그인해주세요.');
+      }
+      
+      console.log('[로그인 완료] ✅ 백엔드 토큰 확인 완료:', {
+        토큰: tokenBeforeNavigate.substring(0, 30) + '...',
+        길이: tokenBeforeNavigate.length,
+        타입: '백엔드 JWT 토큰'
+      });
+      console.log('[로그인 완료] ✅ 대시보드로 이동합니다.');
       navigate('/dashboard');
     } catch (error) {
       console.error('로그인 오류:', error);
