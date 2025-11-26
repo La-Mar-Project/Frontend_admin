@@ -39,11 +39,32 @@ export const apiRequest = async (endpoint, options = {}) => {
 
   // 토큰이 있으면 Authorization 헤더 추가 (localStorage에서 가져오기)
   // adminToken 또는 token 둘 다 확인
-  const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+  let token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+  
+  // 로컬 토큰 감지 및 거부 (백엔드 JWT 토큰만 허용)
+  const isLocalToken = (token) => {
+    if (!token) return false;
+    // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
+    // 로컬 토큰은 짧고 base64 인코딩된 username:timestamp 형태
+    return token.length < 400 || !token.startsWith('eyJ');
+  };
+  
+  // 로컬 토큰이면 제거하고 경고
+  if (token && isLocalToken(token)) {
+    console.error('[API Request] ❌ 로컬 토큰이 감지되었습니다! 백엔드 토큰이 필요합니다.');
+    console.error('[API Request] 로컬 토큰:', token.substring(0, 30) + '...', `(길이: ${token.length})`);
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    token = null;
+    console.warn('[API Request] 로컬 토큰을 제거했습니다. 로그인이 필요합니다.');
+  }
+  
   console.log('[API Request] localStorage에서 토큰 확인:', {
     adminToken: localStorage.getItem('adminToken') ? localStorage.getItem('adminToken').substring(0, 30) + '...' : '없음',
     token: localStorage.getItem('token') ? localStorage.getItem('token').substring(0, 30) + '...' : '없음',
-    사용할토큰: token ? token.substring(0, 30) + '...' : '없음'
+    사용할토큰: token ? token.substring(0, 30) + '...' : '없음',
+    토큰타입: token ? (isLocalToken(token) ? '로컬토큰(거부됨)' : '백엔드JWT') : '없음',
+    토큰길이: token ? token.length : 0
   });
   
   if (token) {

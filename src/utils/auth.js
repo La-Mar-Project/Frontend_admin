@@ -118,10 +118,29 @@ export const logout = () => {
   localStorage.removeItem('adminType');
 };
 
-// 로그인 여부 확인
+// 로컬 토큰 감지 함수
+const isLocalToken = (token) => {
+  if (!token) return false;
+  // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
+  // 로컬 토큰은 짧고 base64 인코딩된 username:timestamp 형태
+  return token.length < 400 || !token.startsWith('eyJ');
+};
+
+// 로그인 여부 확인 (백엔드 토큰만 허용)
 export const isAuthenticated = () => {
   const token = localStorage.getItem('adminToken');
-  return !!token;
+  if (!token) return false;
+  
+  // 로컬 토큰이면 제거하고 false 반환
+  if (isLocalToken(token)) {
+    console.warn('[auth.js] 로컬 토큰이 감지되었습니다. 제거합니다.');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUsername');
+    localStorage.removeItem('adminType');
+    return false;
+  }
+  
+  return true;
 };
 
 // 현재 사용자 정보 가져오기

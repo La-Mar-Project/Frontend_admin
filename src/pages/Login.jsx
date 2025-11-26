@@ -333,6 +333,17 @@ function Login() {
         adminType: localStorage.getItem('adminType')
       });
       
+      // 페이지 이동 전 마지막 확인: 백엔드 토큰이 아니면 로그인 실패
+      const tokenBeforeNavigate = localStorage.getItem('adminToken');
+      if (!tokenBeforeNavigate || isLocalToken(tokenBeforeNavigate)) {
+        console.error('[로그인 완료] ❌ 페이지 이동 전 토큰 확인 실패');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+        throw new Error('백엔드 토큰이 유지되지 않았습니다. 다시 로그인해주세요.');
+      }
+      
+      console.log('[로그인 완료] ✅ 백엔드 토큰 확인 완료, 대시보드로 이동합니다.');
       navigate('/dashboard');
     } catch (error) {
       console.error('로그인 오류:', error);

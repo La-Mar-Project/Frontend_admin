@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import Login from './pages/Login';
 import CompanyInfo from './pages/CompanyInfo';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +13,20 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { isAuthenticated } from './utils/auth';
 
 function App() {
+  // 앱 시작 시 로컬 토큰 자동 제거
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      // 로컬 토큰 감지 (400자 미만이거나 eyJ로 시작하지 않으면 로컬 토큰)
+      const isLocal = token.length < 400 || !token.startsWith('eyJ');
+      if (isLocal) {
+        console.warn('[App] 로컬 토큰이 감지되었습니다. 제거합니다.');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUsername');
+        localStorage.removeItem('adminType');
+      }
+    }
+  }, []);
   return (
     <Router>
       <Routes>
