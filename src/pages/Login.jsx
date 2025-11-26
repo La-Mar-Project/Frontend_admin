@@ -40,12 +40,22 @@ function Login() {
       let token = null;
       let backendResponse = null;
       try {
+        // 인증 서버 URL 가져오기 (환경 변수 또는 기본값)
+        const authApiBaseUrl = import.meta.env.VITE_AUTH_API_BASE_URL || 'https://jjubul-auth.duckdns.org';
+        const authUrl = `${authApiBaseUrl}/auth/admin`;
+        
         console.log('[2단계] 백엔드 토큰 요청 시작');
-        console.log('[2단계] 요청 URL: /auth/admin');
+        console.log('[2단계] 인증 서버 URL:', authApiBaseUrl);
+        console.log('[2단계] 요청 URL:', authUrl);
         console.log('[2단계] Authorization 헤더:', `Basic ${btoa(`${username}:${password}`)}`);
         
-        const response = await apiGet('/auth/admin', {
-          'Authorization': `Basic ${btoa(`${username}:${password}`)}`
+        // 인증 서버는 별도 도메인이므로 직접 fetch 사용
+        const response = await fetch(authUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${btoa(`${username}:${password}`)}`
+          }
         });
 
         console.log('[2단계] 백엔드 응답 상태:', {
