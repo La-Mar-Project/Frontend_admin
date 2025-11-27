@@ -252,7 +252,7 @@ function Login() {
           토큰전체: cleanToken,
           localStorage확인: localStorage.getItem('adminToken')?.substring(0, 30) + '...'
         });
-      } else {
+    } else {
         // 백엔드 토큰이 없으면 로그인 실패
         console.error('[3단계] ❌ 백엔드에서 토큰을 받아오지 못했습니다.');
         console.error('[3단계] 백엔드 응답:', backendResponse);

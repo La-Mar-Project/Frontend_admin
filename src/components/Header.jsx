@@ -27,7 +27,7 @@ function Header() {
   };
 
   const handleHomepage = () => {
-    window.open('https://example.com', '_blank');
+    window.open('https://jjubull.vercel.app/', '_blank');
   };
 
   return (

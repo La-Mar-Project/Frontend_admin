@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { apiGet, apiPost } from '../utils/api';
+import { apiGet, apiPost, apiPatch } from '../utils/api';
 
 function ReservationManagement() {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 20;
+  const [showCouponModal, setShowCouponModal] = useState(false);
   
   // 날짜 선택 관련
   const [year, setYear] = useState(new Date().getFullYear());
@@ -20,6 +23,7 @@ function ReservationManagement() {
   const [selectedBoat, setSelectedBoat] = useState('');
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [boats, setBoats] = useState([]);
+  const [clickedStatusRowId, setClickedStatusRowId] = useState(null);
 
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -61,34 +65,89 @@ function ReservationManagement() {
   const fetchReservations = async () => {
     setLoading(true);
     try {
-      const response = await apiGet('/reservations');
+      // 전체 데이터를 가져오기 위해 모든 페이지를 순회
+      let allReservationsData = [];
+      let currentPage = 0;
+      const pageSize = 100; // 한 번에 가져올 데이터 수
+      let hasMore = true;
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[ReservationManagement] 예약 목록 API 응답 (전체):', result);
-        console.log('[ReservationManagement] 예약 목록 API 응답 타입:', typeof result);
-        console.log('[ReservationManagement] 예약 목록 API 응답이 배열인가?', Array.isArray(result));
+      while (hasMore) {
+        const response = await apiGet(`/reservations?page=${currentPage}&size=${pageSize}`);
         
-        // API 응답이 배열인지 객체인지 확인
-        let reservationsData = [];
-        
-        if (Array.isArray(result)) {
-          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
-          reservationsData = result;
-          console.log('[ReservationManagement] 배열 형태 응답, 데이터 개수:', reservationsData.length);
-        } else if (result.success && result.data) {
-          // 응답이 객체이고 success/data 구조인 경우
-          reservationsData = Array.isArray(result.data) ? result.data : 
-                           (result.data.content ? result.data.content : []);
-          console.log('[ReservationManagement] 객체 형태 응답, 데이터 개수:', reservationsData.length);
-        } else if (result.data) {
-          // data 필드만 있는 경우
-          reservationsData = Array.isArray(result.data) ? result.data : [];
-          console.log('[ReservationManagement] data 필드만 있는 응답, 데이터 개수:', reservationsData.length);
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`[ReservationManagement] 예약 목록 API 응답 (페이지 ${currentPage}):`, result);
+          
+          let pageData = [];
+          
+          if (Array.isArray(result)) {
+            // 응답이 배열인 경우
+            pageData = result;
+            // 배열 응답의 경우, 페이지 크기만큼 정확히 데이터가 있으면 다음 페이지가 있을 수 있음
+            // 하지만 일반적으로 배열 응답은 전체 데이터를 한 번에 반환하므로, pageSize보다 작으면 종료
+            hasMore = pageData.length === pageSize && currentPage === 0;
+          } else if (result.success && result.data) {
+            // 응답이 객체이고 success/data 구조인 경우
+            if (Array.isArray(result.data)) {
+              pageData = result.data;
+            } else if (result.data.content && Array.isArray(result.data.content)) {
+              pageData = result.data.content;
+              // totalElements 확인
+              if (result.data.totalElements !== undefined) {
+                const totalElements = result.data.totalElements;
+                const totalPages = Math.ceil(totalElements / pageSize);
+                hasMore = currentPage < totalPages - 1;
+              } else {
+                hasMore = pageData.length === pageSize;
+              }
+            }
+          } else if (result.data) {
+            // data 필드만 있는 경우
+            if (Array.isArray(result.data)) {
+              pageData = result.data;
+            } else if (result.data.content && Array.isArray(result.data.content)) {
+              pageData = result.data.content;
+              if (result.data.totalElements !== undefined) {
+                const totalElements = result.data.totalElements;
+                const totalPages = Math.ceil(totalElements / pageSize);
+                hasMore = currentPage < totalPages - 1;
+              } else {
+                hasMore = pageData.length === pageSize;
+              }
+            }
+          } else if (result.content && Array.isArray(result.content)) {
+            // PageResponse 형태 (content 필드가 직접 있는 경우)
+            pageData = result.content;
+            if (result.totalElements !== undefined) {
+              const totalElements = result.totalElements;
+              const totalPages = Math.ceil(totalElements / pageSize);
+              hasMore = currentPage < totalPages - 1;
+            } else {
+              hasMore = pageData.length === pageSize;
+            }
+          }
+          
+          allReservationsData = [...allReservationsData, ...pageData];
+          console.log(`[ReservationManagement] 페이지 ${currentPage} 데이터 개수: ${pageData.length}, 누적: ${allReservationsData.length}`);
+          
+          // 더 이상 데이터가 없으면 종료
+          if (pageData.length < pageSize && !hasMore) {
+            hasMore = false;
+          } else if (pageData.length === 0) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
         } else {
-          console.warn('[ReservationManagement] 알 수 없는 응답 구조:', result);
-          reservationsData = [];
+          console.error(`[ReservationManagement] 페이지 ${currentPage} 조회 실패:`, response.status);
+          hasMore = false;
         }
+      }
+      
+      console.log('[ReservationManagement] 전체 예약 데이터 개수:', allReservationsData.length);
+      
+      // API 응답이 배열인지 객체인지 확인
+      let reservationsData = allReservationsData;
         
         console.log('[ReservationManagement] 처리할 예약 데이터:', reservationsData);
         
@@ -130,21 +189,6 @@ function ReservationManagement() {
         
         console.log('[ReservationManagement] 최종 포맷된 예약 목록:', formattedReservations);
         setReservations(formattedReservations);
-      } else {
-        // 에러 응답의 본문 확인
-        let errorMessage = `HTTP ${response.status}`;
-        try {
-          const errorData = await response.json();
-          console.error('[ReservationManagement] 예약 목록 조회 실패 - 응답 본문:', errorData);
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch (e) {
-          const errorText = await response.text();
-          console.error('[ReservationManagement] 예약 목록 조회 실패 - 응답 텍스트:', errorText.substring(0, 500));
-        }
-        console.error('[ReservationManagement] 예약 목록 조회 실패:', response.status, errorMessage);
-        // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록 함
-        setReservations([]);
-      }
     } catch (error) {
       console.error('[ReservationManagement] 예약 목록 조회 오류:', error);
       // 에러가 발생해도 빈 배열로 설정하여 UI가 깨지지 않도록 함
@@ -239,37 +283,122 @@ function ReservationManagement() {
     if (showStartCalendar) {
       setStartDate(dateStr);
       setShowStartCalendar(false);
+      if (!endDate || dateStr > endDate) {
+        setEndDate('');
+      }
     } else if (showEndCalendar) {
+      if (startDate && dateStr < startDate) {
+        alert('끝날짜는 시작날짜보다 이후여야 합니다.');
+        return;
+      }
       setEndDate(dateStr);
       setShowEndCalendar(false);
     }
+  };
+
+  // 날짜 범위 확인 함수
+  const isDateInRange = (day) => {
+    if (!startDate || !endDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr >= startDate && dateStr <= endDate;
+  };
+
+  const isStartDate = (day) => {
+    if (!startDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr === startDate;
+  };
+
+  const isEndDate = (day) => {
+    if (!endDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr === endDate;
   };
 
   // 검색하기 버튼 클릭
   const handleSearch = async () => {
     setLoading(true);
     try {
-      // 전체 예약 목록 가져오기 (파라미터 없이)
-      const response = await apiGet('/reservations');
+      // 전체 데이터를 가져오기 위해 모든 페이지를 순회
+      let allReservationsData = [];
+      let currentPage = 0;
+      const pageSize = 100; // 한 번에 가져올 데이터 수
+      let hasMore = true;
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[ReservationManagement] 검색 결과 (전체):', result);
+      while (hasMore) {
+        const response = await apiGet(`/reservations?page=${currentPage}&size=${pageSize}`);
         
-        // API 응답이 배열인지 객체인지 확인
-        let allReservationsData = [];
-        
-        if (Array.isArray(result)) {
-          // 응답이 배열인 경우 (OpenAPI 스펙에 따르면 배열 반환)
-          allReservationsData = result;
-        } else if (result.success && result.data) {
-          // 응답이 객체이고 success/data 구조인 경우
-          allReservationsData = Array.isArray(result.data) ? result.data : 
-                               (result.data.content ? result.data.content : []);
-        } else if (result.data) {
-          // data 필드만 있는 경우
-          allReservationsData = Array.isArray(result.data) ? result.data : [];
+        if (response.ok) {
+          const result = await response.json();
+          console.log(`[ReservationManagement] 검색 API 응답 (페이지 ${currentPage}):`, result);
+          
+          let pageData = [];
+          
+          if (Array.isArray(result)) {
+            // 응답이 배열인 경우
+            pageData = result;
+            // 배열 응답의 경우, 페이지 크기만큼 정확히 데이터가 있으면 다음 페이지가 있을 수 있음
+            // 하지만 일반적으로 배열 응답은 전체 데이터를 한 번에 반환하므로, pageSize보다 작으면 종료
+            hasMore = pageData.length === pageSize && currentPage === 0;
+          } else if (result.success && result.data) {
+            // 응답이 객체이고 success/data 구조인 경우
+            if (Array.isArray(result.data)) {
+              pageData = result.data;
+            } else if (result.data.content && Array.isArray(result.data.content)) {
+              pageData = result.data.content;
+              // totalElements 확인
+              if (result.data.totalElements !== undefined) {
+                const totalElements = result.data.totalElements;
+                const totalPages = Math.ceil(totalElements / pageSize);
+                hasMore = currentPage < totalPages - 1;
+              } else {
+                hasMore = pageData.length === pageSize;
+              }
+            }
+          } else if (result.data) {
+            // data 필드만 있는 경우
+            if (Array.isArray(result.data)) {
+              pageData = result.data;
+            } else if (result.data.content && Array.isArray(result.data.content)) {
+              pageData = result.data.content;
+              if (result.data.totalElements !== undefined) {
+                const totalElements = result.data.totalElements;
+                const totalPages = Math.ceil(totalElements / pageSize);
+                hasMore = currentPage < totalPages - 1;
+              } else {
+                hasMore = pageData.length === pageSize;
+              }
+            }
+          } else if (result.content && Array.isArray(result.content)) {
+            // PageResponse 형태 (content 필드가 직접 있는 경우)
+            pageData = result.content;
+            if (result.totalElements !== undefined) {
+              const totalElements = result.totalElements;
+              const totalPages = Math.ceil(totalElements / pageSize);
+              hasMore = currentPage < totalPages - 1;
+            } else {
+              hasMore = pageData.length === pageSize;
+            }
+          }
+          
+          allReservationsData = [...allReservationsData, ...pageData];
+          console.log(`[ReservationManagement] 검색 - 페이지 ${currentPage} 데이터 개수: ${pageData.length}, 누적: ${allReservationsData.length}`);
+          
+          // 더 이상 데이터가 없으면 종료
+          if (pageData.length < pageSize && !hasMore) {
+            hasMore = false;
+          } else if (pageData.length === 0) {
+            hasMore = false;
+          } else {
+            currentPage++;
+          }
+        } else {
+          console.error(`[ReservationManagement] 검색 - 페이지 ${currentPage} 조회 실패:`, response.status);
+          hasMore = false;
         }
+      }
+      
+      console.log('[ReservationManagement] 검색 - 전체 예약 데이터 개수:', allReservationsData.length);
         
         console.log('[ReservationManagement] 검색 - 처리할 예약 데이터:', allReservationsData);
         
@@ -340,10 +469,6 @@ function ReservationManagement() {
         
         console.log('[ReservationManagement] 검색 - 최종 포맷된 예약 목록:', formattedReservations);
         setReservations(formattedReservations);
-      } else {
-        console.error('[ReservationManagement] 검색 실패:', response.status);
-        alert('검색에 실패했습니다.');
-      }
     } catch (error) {
       console.error('[ReservationManagement] 검색 오류:', error);
       alert('검색 중 오류가 발생했습니다.');
@@ -380,6 +505,12 @@ function ReservationManagement() {
       if (response.ok) {
         const result = await response.json();
         console.log('[ReservationManagement] 쿠폰 설정 성공:', result);
+        
+        // 쿠폰 추가 시 팝업 표시
+        if (newCouponState) {
+          setShowCouponModal(true);
+          setTimeout(() => setShowCouponModal(false), 2000);
+        }
         
         // API 응답에 따라 상태 업데이트 (서버 응답이 최종 상태)
         // result.data가 null이 아닌지 확인
@@ -441,6 +572,96 @@ function ReservationManagement() {
       newSelected.add(id);
     }
     setSelectedRows(newSelected);
+  };
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (newPage) => {
+    const totalPages = Math.ceil(reservations.length / itemsPerPage);
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // 예약상태 변경 핸들러 (개별 예약)
+  const handleStatusChange = async (reservationId, newStatus) => {
+    const statusMap = {
+      '예약접수': 'RESERVE_COMPLETED',
+      '입금완료': 'DEPOSIT_COMPLETED',
+      '취소접수': 'CANCEL_REQUESTED',
+      '취소완료': 'CANCEL_COMPLETED'
+    };
+
+    const processValue = statusMap[newStatus];
+    if (!processValue) {
+      alert('올바른 상태를 선택해주세요.');
+      return;
+    }
+
+    if (!reservationId) {
+      console.error('[ReservationManagement] reservationId가 없습니다.');
+      alert('예약 ID를 찾을 수 없습니다.');
+      return;
+    }
+
+    const endpoint = `/reservations/${reservationId}/process`;
+    const requestBody = { process: processValue };
+
+    console.log('[ReservationManagement] 예약 상태 변경 요청:', {
+      endpoint,
+      reservationId,
+      newStatus,
+      processValue,
+      requestBody,
+      method: 'PATCH'
+    });
+
+    setLoading(true);
+    try {
+      const response = await apiPatch(endpoint, requestBody);
+
+      console.log('[ReservationManagement] 예약 상태 변경 응답:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        url: response.url
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[ReservationManagement] 예약 상태 변경 성공:', result);
+        
+        // 목록 다시 불러오기
+        await fetchReservations();
+        setClickedStatusRowId(null);
+      } else {
+        const errorText = await response.text().catch(() => '');
+        let errorData = {};
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          console.error('[ReservationManagement] 에러 응답 파싱 실패:', errorText);
+        }
+        console.error('[ReservationManagement] 예약 상태 변경 실패:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          errorText: errorText.substring(0, 500)
+        });
+        alert(`예약 상태 변경에 실패했습니다: ${errorData.message || errorData.error || response.statusText || '알 수 없는 오류'}`);
+      }
+    } catch (error) {
+      console.error('[ReservationManagement] 예약 상태 변경 오류:', error);
+      console.error('[ReservationManagement] 에러 상세:', {
+        message: error.message,
+        stack: error.stack,
+        endpoint,
+        requestBody
+      });
+      alert('예약 상태 변경 중 오류가 발생했습니다: ' + error.message);
+    } finally {
+      setLoading(false);
+      setClickedStatusRowId(null);
+    }
   };
 
   return (
@@ -535,7 +756,9 @@ function ReservationManagement() {
                               onClick={() => handleDateSelect(day)}
                               className={`text-center text-[14px] py-[8px] cursor-pointer rounded
                                 ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                ${day.isCurrentMonth && startDate && startDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
                                 hover:bg-[#EEF4FF]`}
                             >
                               {day.date}
@@ -585,7 +808,9 @@ function ReservationManagement() {
                               onClick={() => handleDateSelect(day)}
                               className={`text-center text-[14px] py-[8px] cursor-pointer rounded
                                 ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                ${day.isCurrentMonth && endDate && endDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
                                 hover:bg-[#EEF4FF]`}
                             >
                               {day.date}
@@ -702,7 +927,6 @@ function ReservationManagement() {
               </div>
             </div>
           </div>
-        </div>
 
         <div className="flex flex-col items-start gap-[65px] pl-[42px]">
           <div className="flex flex-col items-start gap-[10px]">
@@ -777,7 +1001,7 @@ function ReservationManagement() {
                     </span>
                   </div>
                 ) : (
-                  reservations.map((row) => (
+                  reservations.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage).map((row) => (
                   <div key={row.id} className="flex items-start self-stretch">
                     <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[66px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
                       <svg 
@@ -820,10 +1044,61 @@ function ReservationManagement() {
                         {row.memo}
                       </span>
                     </div>
-                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
-                      <span className="text-[14px] font-normal whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard', color: row.statusColor }}>
+                    <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[110px] min-h-[48px] border-2 border-[#DFE7F4] bg-white relative">
+                      <span 
+                        className="text-[14px] font-normal whitespace-normal text-center break-words w-full cursor-pointer" 
+                        style={{ fontFamily: 'Pretendard', color: row.statusColor }}
+                        onClick={() => {
+                          const reservationId = row.reservationPublicId || row.id;
+                          if (clickedStatusRowId === reservationId) {
+                            setClickedStatusRowId(null);
+                          } else {
+                            setClickedStatusRowId(reservationId);
+                          }
+                        }}
+                      >
                         {row.status}
                       </span>
+                      {clickedStatusRowId === (row.reservationPublicId || row.id) && (
+                        <div className="absolute top-[48px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[120px]">
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
+                            onClick={() => {
+                              const reservationId = row.reservationPublicId || row.id;
+                              handleStatusChange(reservationId, '예약접수');
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[14px]">예약접수</p>
+                          </div>
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer"
+                            onClick={() => {
+                              const reservationId = row.reservationPublicId || row.id;
+                              handleStatusChange(reservationId, '입금완료');
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[14px]">입금완료</p>
+                          </div>
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer"
+                            onClick={() => {
+                              const reservationId = row.reservationPublicId || row.id;
+                              handleStatusChange(reservationId, '취소접수');
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[14px]">취소접수</p>
+                          </div>
+                          <div 
+                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
+                            onClick={() => {
+                              const reservationId = row.reservationPublicId || row.id;
+                              handleStatusChange(reservationId, '취소완료');
+                            }}
+                          >
+                            <p className="text-[#272C3C] font-pretendard text-[14px]">취소완료</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center justify-center gap-[10px] px-[10px] py-[12px] w-[160px] min-h-[48px] border-2 border-[#DFE7F4] bg-white">
                       <span className="text-[14px] font-normal text-[#272C3C] whitespace-normal text-center break-words w-full" style={{ fontFamily: 'Pretendard' }}>
@@ -863,38 +1138,104 @@ function ReservationManagement() {
                 )}
               </div>
             </div>
-          </div>
 
-          {/* 페이지네이션 */}
-          <div className="flex items-center justify-center gap-[10px] bg-white px-0 py-[50px] w-full max-w-[1056px]">
-            <div className="flex items-center gap-[20px]">
-              <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M30 11L20 20.5L30 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="flex items-center gap-[4px]">
-              <div className="flex items-center justify-center w-[40px] px-[10px] py-[10px] rounded-[5px] border border-[#73757C] bg-[#F2F2F2]">
-                <span className="text-[18px] font-medium text-[#73757C] text-center" style={{ fontFamily: 'Pretendard' }}>
-                  1
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-[20px]">
-              <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 11L20 20.5L10 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1.5 11L11.5 20.5L1.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M11.5 11L21.5 20.5L11.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+            {/* 페이지네이션 */}
+            {(() => {
+              const totalPages = Math.ceil(reservations.length / itemsPerPage);
+              if (reservations.length <= itemsPerPage || totalPages <= 0) return null;
+              return (
+                <div className="flex w-full max-w-[1056px] py-[50px] justify-center items-center gap-[10px] bg-white">
+                  <div className="flex items-center gap-[20px]">
+                    <button
+                      onClick={() => handlePageChange(0)}
+                      disabled={currentPage === 0}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M30 11L20 20.5L30 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 0}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-[4px]">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i;
+                      } else if (currentPage < 3) {
+                        pageNum = i;
+                      } else if (currentPage > totalPages - 4) {
+                        pageNum = totalPages - 5 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`flex w-[40px] px-[10px] py-[10px] flex-col justify-center items-center gap-[10px] rounded-[5px] ${
+                            currentPage === pageNum ? 'border border-[#73757C] bg-[#F2F2F2]' : ''
+                          }`}
+                        >
+                          <div className="text-center font-medium text-[18px] leading-normal text-[#73757C]" 
+                               style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}>
+                            {pageNum + 1}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center gap-[20px]">
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages - 1}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 11L20 20.5L10 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(totalPages - 1)}
+                      disabled={currentPage >= totalPages - 1}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M1.5 11L11.5 20.5L1.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path d="M11.5 11L21.5 20.5L11.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
+
+      {/* 쿠폰 추가 팝업 */}
+      {showCouponModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[20px] p-[40px] w-[400px]">
+            <h2 className="text-[24px] font-bold mb-[20px] text-[#272C3C] text-center" style={{ fontFamily: 'Pretendard' }}>
+              쿠폰을 추가하였습니다
+            </h2>
+          </div>
+        </div>
+      )}
+    </div>
     </Layout>
   );
 }

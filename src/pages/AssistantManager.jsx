@@ -7,6 +7,9 @@ function AssistantManager() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({ password: '', confirmPassword: '' });
   const [currentSavingItem, setCurrentSavingItem] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 20;
   const saveTimerRef = useRef(null);
 
   // localStorage에서 보조 관리자 데이터 불러오기
@@ -55,26 +58,34 @@ function AssistantManager() {
       alert('삭제할 항목을 선택해주세요.');
       return;
     }
-    if (window.confirm(`${selectedItems.length}개의 항목을 삭제하시겠습니까?`)) {
-      const updatedData = assistantData.filter(item => !selectedItems.includes(item.id));
-      setAssistantData(updatedData);
-      setSelectedItems([]);
-      
-      // localStorage에서도 삭제된 관리자 정보 제거
-      const allManagers = JSON.parse(localStorage.getItem('assistantManagers') || '[]');
-      const filteredManagers = allManagers.filter(item => !selectedItems.includes(item.id));
-      localStorage.setItem('assistantManagers', JSON.stringify(filteredManagers));
-      
-      // auth 데이터에서도 제거
-      const authData = JSON.parse(localStorage.getItem('assistantAuth') || '{}');
-      selectedItems.forEach(id => {
-        const item = assistantData.find(d => d.id === id);
-        if (item && item.userId) {
-          delete authData[item.userId];
-        }
-      });
-      localStorage.setItem('assistantAuth', JSON.stringify(authData));
-    }
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    const updatedData = assistantData.filter(item => !selectedItems.includes(item.id));
+    setAssistantData(updatedData);
+    setSelectedItems([]);
+    
+    // localStorage에서도 삭제된 관리자 정보 제거
+    const allManagers = JSON.parse(localStorage.getItem('assistantManagers') || '[]');
+    const filteredManagers = allManagers.filter(item => !selectedItems.includes(item.id));
+    localStorage.setItem('assistantManagers', JSON.stringify(filteredManagers));
+    
+    // auth 데이터에서도 제거
+    const authData = JSON.parse(localStorage.getItem('assistantAuth') || '{}');
+    selectedItems.forEach(id => {
+      const item = assistantData.find(d => d.id === id);
+      if (item && item.userId) {
+        delete authData[item.userId];
+      }
+    });
+    localStorage.setItem('assistantAuth', JSON.stringify(authData));
+    
+    setShowDeleteModal(false);
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
   };
 
   const handleFieldChange = (id, field, value) => {
@@ -175,6 +186,14 @@ function AssistantManager() {
     setShowPasswordModal(false);
     setPasswordData({ password: '', confirmPassword: '' });
     setCurrentSavingItem(null);
+  };
+
+  // 페이지 변경 핸들러
+  const handlePageChange = (newPage) => {
+    const totalPages = Math.ceil(assistantData.length / itemsPerPage);
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+    }
   };
 
   return (
@@ -396,7 +415,7 @@ function AssistantManager() {
                     </div>
                   </div>
 
-                  {assistantData.map((item) => (
+                  {assistantData.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage).map((item) => (
                     <div key={item.id} className="flex items-center w-full">
                       <div
                         className="flex justify-center items-center gap-[10px] px-[20px]"
@@ -449,22 +468,30 @@ function AssistantManager() {
                           background: item.isNew ? 'rgba(255, 255, 224, 1)' : 'rgba(255, 255, 255, 1)'
                         }}
                       >
-                        <select
-                          value={item.active}
-                          onChange={(e) => handleActiveChange(item.id, e.target.value)}
-                          className="text-[18px] text-center w-full bg-transparent outline-none whitespace-nowrap cursor-pointer"
-                          style={{
-                            color: 'rgba(39, 44, 60, 1)',
-                            fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif',
-                            fontWeight: 400,
-                            lineHeight: 'normal',
-                            border: 'none'
-                          }}
-                        >
-                          <option value="">선택</option>
-                          <option value="활성">활성</option>
-                          <option value="비활성">비활성</option>
-                        </select>
+                        <div className="flex gap-[5px] w-full">
+                          <button
+                            onClick={() => handleActiveChange(item.id, '활성')}
+                            className={`flex-1 py-[6px] px-[10px] rounded-[5px] text-[16px] font-medium transition-colors ${
+                              item.active === '활성' 
+                                ? 'bg-[#2754DA] text-white' 
+                                : 'bg-white text-[#272C3C] hover:bg-[#E7E7E7]'
+                            }`}
+                            style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}
+                          >
+                            활성
+                          </button>
+                          <button
+                            onClick={() => handleActiveChange(item.id, '비활성')}
+                            className={`flex-1 py-[6px] px-[10px] rounded-[5px] text-[16px] font-medium transition-colors ${
+                              item.active === '비활성' 
+                                ? 'bg-[#73757C] text-white' 
+                                : 'bg-white text-[#272C3C] hover:bg-[#E7E7E7]'
+                            }`}
+                            style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}
+                          >
+                            비활성
+                          </button>
+                        </div>
                       </div>
                       <div
                         className="flex justify-center items-center gap-[10px] px-[20px] py-[12px]"
@@ -584,52 +611,115 @@ function AssistantManager() {
             </div>
           </div>
 
-          <div className="flex items-center gap-[10px] px-[340px] py-[50px] bg-white w-full max-w-[1056px]">
-            <div className="flex items-center gap-[20px]">
-              <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M30 11L20 20.5L30 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <div className="flex items-center gap-[4px]">
-              {[1, 1, 1, 1, 1].map((_, index) => (
-                <div 
-                  key={index}
-                  className="flex flex-col justify-center items-center gap-[10px] px-[10px] py-[10px] rounded-[5px]"
-                  style={{
-                    width: '40px',
-                    border: index === 2 ? '1px solid rgba(115, 117, 124, 1)' : 'none',
-                    background: index === 2 ? 'rgba(242, 242, 242, 1)' : 'transparent'
-                  }}
-                >
-                  <span 
-                    className="text-center font-medium text-[18px]" 
-                    style={{ 
-                      color: 'rgba(115, 117, 124, 1)',
-                      fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif',
-                      lineHeight: 'normal'
-                    }}
+          {(() => {
+            const totalPages = Math.ceil(assistantData.length / itemsPerPage);
+            return assistantData.length > itemsPerPage && totalPages > 0 && (
+              <div className="flex w-full max-w-[1056px] py-[50px] justify-center items-center gap-[10px] bg-white">
+                <div className="flex items-center gap-[20px]">
+                  <button
+                    onClick={() => handlePageChange(0)}
+                    disabled={currentPage === 0}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    1
-                  </span>
+                    <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M30 11L20 20.5L30 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 0}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                 </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-[20px]">
-              <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M10 11L20 20.5L10 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1.5 11L11.5 20.5L1.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M11.5 11L21.5 20.5L11.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+
+                <div className="flex items-center gap-[4px]">
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i;
+                    } else if (currentPage < 3) {
+                      pageNum = i;
+                    } else if (currentPage > totalPages - 4) {
+                      pageNum = totalPages - 5 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`flex w-[40px] px-[10px] py-[10px] flex-col justify-center items-center gap-[10px] rounded-[5px] ${
+                          currentPage === pageNum ? 'border border-[#73757C] bg-[#F2F2F2]' : ''
+                        }`}
+                      >
+                        <div className="text-center font-medium text-[18px] leading-normal text-[#73757C]" 
+                             style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}>
+                          {pageNum + 1}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-[20px]">
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages - 1}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M10 11L20 20.5L10 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(totalPages - 1)}
+                    disabled={currentPage >= totalPages - 1}
+                    className="disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M1.5 11L11.5 20.5L1.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M11.5 11L21.5 20.5L11.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </div>
+
+      {/* 삭제 확인 모달 */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-[20px] p-[40px] w-[500px]">
+            <h2 className="text-[24px] font-bold mb-[20px] text-[#272C3C] text-center" style={{ fontFamily: 'Pretendard' }}>
+              {selectedItems.length}개의 관리자 아이디를 정말로 삭제하시겠습니까?
+            </h2>
+            <div className="flex gap-[10px] justify-center mt-[30px]">
+              <button
+                onClick={handleCancelDelete}
+                className="px-[40px] py-[12px] bg-[#E7E7E7] rounded-[10px] hover:bg-[#D9D9D9] text-[#272C3C] font-medium text-[16px] transition-colors"
+                style={{ fontFamily: 'Pretendard' }}
+              >
+                아뇨, 기존 목록을 유지하겠습니다
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-[40px] py-[12px] bg-[#2754DA] text-white rounded-[10px] hover:opacity-90 font-medium text-[16px] transition-opacity"
+                style={{ fontFamily: 'Pretendard' }}
+              >
+                네, 삭제하겠습니다
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 비밀번호 설정 모달 */}
       {showPasswordModal && currentSavingItem && (

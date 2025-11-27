@@ -78,7 +78,7 @@ export const apiRequest = async (endpoint, options = {}) => {
       전체길이: authHeader.length
     });
   }
-  
+
   const config = {
     ...options,
     headers: mergedHeaders,

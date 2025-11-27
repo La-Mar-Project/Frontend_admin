@@ -24,8 +24,56 @@ function ReservationCalendar() {
   const [isLoadingCalendar, setIsLoadingCalendar] = useState(false);
   const [selectedReservationDetail, setSelectedReservationDetail] = useState(null); // 선택된 예약 상세 정보
   const [showReservationDetailModal, setShowReservationDetailModal] = useState(false); // 예약 상세 정보 모달
+  const [showYearDropdown, setShowYearDropdown] = useState(false);
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
+  const [calendarYear, setCalendarYear] = useState(today.getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState(today.getMonth() + 1);
+  const [showMainYearDropdown, setShowMainYearDropdown] = useState(false);
+  const [showMainMonthDropdown, setShowMainMonthDropdown] = useState(false);
 
   const daysOfWeek = ['일', '월', '화', '수', '목', '금', '토'];
+  
+  // 년도 목록 생성 (현재 년도 기준 ±50년)
+  const generateYearList = () => {
+    const currentYear = today.getFullYear();
+    const years = [];
+    for (let i = currentYear - 50; i <= currentYear + 50; i++) {
+      years.push(i);
+    }
+    return years;
+  };
+
+  // 월 목록 생성
+  const generateMonthList = () => {
+    return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  };
+
+  // 드롭다운 외부 클릭 시 닫기
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showMainYearDropdown || showMainMonthDropdown) {
+        const target = event.target;
+        const isYearDropdown = target.closest('.main-year-dropdown');
+        const isMonthDropdown = target.closest('.main-month-dropdown');
+        const isYearButton = target.closest('.main-year-button');
+        const isMonthButton = target.closest('.main-month-button');
+        
+        if (!isYearDropdown && !isYearButton && showMainYearDropdown) {
+          setShowMainYearDropdown(false);
+        }
+        if (!isMonthDropdown && !isMonthButton && showMainMonthDropdown) {
+          setShowMainMonthDropdown(false);
+        }
+      }
+    };
+
+    if (showMainYearDropdown || showMainMonthDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showMainYearDropdown, showMainMonthDropdown]);
 
   // 배 리스트 불러오기
   useEffect(() => {
@@ -276,11 +324,18 @@ function ReservationCalendar() {
     const days = [];
     
     // 이전 달 날짜
+    let prevMonth = month - 1;
+    let prevYear = year;
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear = year - 1;
+    }
+    
     for (let i = firstDayOfWeek - 1; i >= 0; i--) {
       days.push({
         date: daysInPrevMonth - i,
-        month: month - 1,
-        year: year,
+        month: prevMonth,
+        year: prevYear,
         isPrevMonth: true
       });
     }
@@ -296,12 +351,19 @@ function ReservationCalendar() {
     }
     
     // 다음 달 날짜
+    let nextMonth = month + 1;
+    let nextYear = year;
+    if (nextMonth === 13) {
+      nextMonth = 1;
+      nextYear = year + 1;
+    }
+    
     const remainingDays = 42 - days.length; // 6주 (42일)
     for (let i = 1; i <= remainingDays; i++) {
       days.push({
         date: i,
-        month: month + 1,
-        year: year,
+        month: nextMonth,
+        year: nextYear,
         isNextMonth: true
       });
     }
@@ -310,15 +372,66 @@ function ReservationCalendar() {
   };
 
   const handleDateSelect = (day) => {
-    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    // 캘린더에서 선택한 날짜의 실제 연도/월 사용
+    const actualYear = day.year || calendarYear;
+    const actualMonth = day.month || calendarMonth;
+    const dateStr = `${actualYear}-${String(actualMonth).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
     
     if (showStartCalendar) {
-      setStartDate(dateStr);
-      setShowStartCalendar(false);
+      // 시작날짜가 없으면 시작날짜로 설정
+      if (!startDate) {
+        setStartDate(dateStr);
+        if (endDate && dateStr > endDate) {
+          setEndDate('');
+        }
+      } 
+      // 시작날짜가 있고, 선택한 날짜가 시작날짜와 같으면 아무것도 하지 않음
+      else if (startDate === dateStr && !endDate) {
+        // 같은 날짜를 다시 클릭하면 초기화
+        setStartDate('');
+      }
+      // 시작날짜가 있고, 선택한 날짜가 시작날짜보다 이후면 끝날짜로 설정
+      else if (startDate && dateStr > startDate) {
+        setEndDate(dateStr);
+        setShowStartCalendar(false);
+      }
+      // 시작날짜가 있고, 선택한 날짜가 시작날짜보다 이전이면 새로운 시작날짜로 설정
+      else if (startDate && dateStr < startDate) {
+        setStartDate(dateStr);
+        setEndDate('');
+      }
+      // 시작날짜와 끝날짜가 모두 있고, 같은 날짜를 클릭하면 초기화
+      else if (startDate === dateStr && endDate) {
+        setStartDate('');
+        setEndDate('');
+      }
     } else if (showEndCalendar) {
+      if (startDate && dateStr < startDate) {
+        alert('끝날짜는 시작날짜보다 이후여야 합니다.');
+        return;
+      }
       setEndDate(dateStr);
       setShowEndCalendar(false);
     }
+  };
+
+  // 날짜 범위 확인 함수
+  const isDateInRange = (day) => {
+    if (!startDate || !endDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr >= startDate && dateStr <= endDate;
+  };
+
+  const isStartDate = (day) => {
+    if (!startDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr === startDate;
+  };
+
+  const isEndDate = (day) => {
+    if (!endDate) return false;
+    const dateStr = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`;
+    return dateStr === endDate;
   };
 
   const handleDayClick = async (dayData) => {
@@ -803,27 +916,28 @@ function ReservationCalendar() {
       return;
     }
 
-    // 타입 매핑: '일반예약' -> 'NORMAL', '선예약' -> 'EARLY'
-    const scheduleTypeMap = {
-      '일반예약': 'NORMAL',
-      '선예약': 'EARLY'
-    };
-    const scheduleType = selectedType ? scheduleTypeMap[selectedType] || 'NORMAL' : 'NORMAL';
+    // startDate와 endDate에서 연도 추출하여 ISO 형식으로 변환
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    const startYear = startDateObj.getFullYear();
+    const endYear = endDateObj.getFullYear();
+    
+    // ISO 형식으로 변환 (YYYY-MM-DDTHH:mm:ss)
+    const startDateISO = `${startDate}T00:00:00`;
+    const endDateISO = `${endDate}T23:59:59`;
 
     try {
       console.log('[ReservationCalendar] 스케줄 생성 API 요청 시작');
       console.log('[ReservationCalendar] 요청 데이터:', {
-        startDate,
-        endDate,
-        shipId: parseInt(selectedBoat),
-        scheduleType
+        startDate: startDateISO,
+        endDate: endDateISO,
+        shipId: parseInt(selectedBoat)
       });
       
       const response = await apiPost('/schedules', {
-        startDate: startDate,
-        endDate: endDate,
-        shipId: parseInt(selectedBoat),
-        scheduleType: scheduleType
+        startDate: startDateISO,
+        endDate: endDateISO,
+        shipId: parseInt(selectedBoat)
       });
 
       console.log('[ReservationCalendar] 스케줄 생성 API 응답:', response);
@@ -1079,7 +1193,21 @@ function ReservationCalendar() {
                     <div className="flex items-center">
                       <div 
                         className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                        onClick={() => setShowStartCalendar(!showStartCalendar)}
+                        onClick={() => {
+                          setShowStartCalendar(!showStartCalendar);
+                          setShowEndCalendar(false);
+                          if (!showStartCalendar) {
+                            // 캘린더 열 때 현재 선택된 날짜의 연도/월로 설정
+                            if (startDate) {
+                              const dateObj = new Date(startDate);
+                              setCalendarYear(dateObj.getFullYear());
+                              setCalendarMonth(dateObj.getMonth() + 1);
+                            } else {
+                              setCalendarYear(year);
+                              setCalendarMonth(month);
+                            }
+                          }
+                        }}
                       >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
@@ -1093,7 +1221,25 @@ function ReservationCalendar() {
                       </div>
                       <div 
                         className="flex w-[184px] py-[9px] px-[20px] items-center gap-[10px] rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                        onClick={() => setShowEndCalendar(!showEndCalendar)}
+                        onClick={() => {
+                          setShowEndCalendar(!showEndCalendar);
+                          setShowStartCalendar(false);
+                          if (!showEndCalendar) {
+                            // 캘린더 열 때 현재 선택된 날짜의 연도/월로 설정
+                            if (endDate) {
+                              const dateObj = new Date(endDate);
+                              setCalendarYear(dateObj.getFullYear());
+                              setCalendarMonth(dateObj.getMonth() + 1);
+                            } else if (startDate) {
+                              const dateObj = new Date(startDate);
+                              setCalendarYear(dateObj.getFullYear());
+                              setCalendarMonth(dateObj.getMonth() + 1);
+                            } else {
+                              setCalendarYear(year);
+                              setCalendarMonth(month);
+                            }
+                          }
+                        }}
                       >
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                           <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
@@ -1106,25 +1252,144 @@ function ReservationCalendar() {
                     
                     {/* 시작날짜 캘린더 팝업 */}
                     {showStartCalendar && (
-                      <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                        <div className="flex items-center justify-between mb-[15px]">
-                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                          <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
-                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                      <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        {/* 년도 선택 행 */}
+                        <div className="flex items-center justify-between mb-[10px] relative">
+                          <button 
+                            onClick={() => {
+                              if (calendarYear > today.getFullYear() - 50) {
+                                setCalendarYear(calendarYear - 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                            disabled={calendarYear <= today.getFullYear() - 50}
+                          >
+                            <span>&lt;&lt;</span>
+                            <span>이전해</span>
+                          </button>
+                          <div className="relative">
+                            <div 
+                              className="flex items-center gap-[5px] px-[15px] py-[5px] cursor-pointer hover:bg-[#EEF4FF] rounded-[5px]"
+                              onClick={() => {
+                                setShowYearDropdown(!showYearDropdown);
+                                setShowMonthDropdown(false);
+                              }}
+                            >
+                              <p className="text-[#2754DA] text-[18px] font-medium">{calendarYear}년</p>
+                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 1L6 6L11 1" stroke="#2754DA" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                            {showYearDropdown && (
+                              <div className="absolute top-[35px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[120px] max-h-[150px] overflow-y-auto z-10">
+                                {generateYearList().map((y) => (
+                                  <div
+                                    key={y}
+                                    onClick={() => {
+                                      setCalendarYear(y);
+                                      setShowYearDropdown(false);
+                                    }}
+                                    className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                                      y === calendarYear ? 'bg-[#EEF4FF] font-bold' : ''
+                                    }`}
+                                  >
+                                    <p className="text-[#272C3C] text-[14px]">{y}년</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              if (calendarYear < today.getFullYear() + 50) {
+                                setCalendarYear(calendarYear + 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                            disabled={calendarYear >= today.getFullYear() + 50}
+                          >
+                            <span>다음해</span>
+                            <span>&gt;&gt;</span>
+                          </button>
                         </div>
+                        
+                        {/* 월 선택 행 */}
+                        <div className="flex items-center justify-between mb-[15px] relative">
+                          <button 
+                            onClick={() => {
+                              if (calendarMonth === 1) {
+                                setCalendarMonth(12);
+                                setCalendarYear(calendarYear - 1);
+                              } else {
+                                setCalendarMonth(calendarMonth - 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                          >
+                            <span>&lt;</span>
+                            <span>이전달</span>
+                          </button>
+                          <div className="relative">
+                            <div 
+                              className="flex items-center gap-[5px] px-[15px] py-[5px] cursor-pointer hover:bg-[#EEF4FF] rounded-[5px]"
+                              onClick={() => {
+                                setShowMonthDropdown(!showMonthDropdown);
+                                setShowYearDropdown(false);
+                              }}
+                            >
+                              <p className="text-[#2754DA] text-[18px] font-medium">{calendarMonth}월</p>
+                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 1L6 6L11 1" stroke="#2754DA" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                            {showMonthDropdown && (
+                              <div className="absolute top-[35px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[100px] max-h-[180px] overflow-y-auto z-10">
+                                {generateMonthList().map((m) => (
+                                  <div
+                                    key={m}
+                                    onClick={() => {
+                                      setCalendarMonth(m);
+                                      setShowMonthDropdown(false);
+                                    }}
+                                    className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                                      m === calendarMonth ? 'bg-[#EEF4FF] font-bold' : ''
+                                    }`}
+                                  >
+                                    <p className="text-[#272C3C] text-[14px]">{m}월</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              if (calendarMonth === 12) {
+                                setCalendarMonth(1);
+                                setCalendarYear(calendarYear + 1);
+                              } else {
+                                setCalendarMonth(calendarMonth + 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                          >
+                            <span>다음달</span>
+                            <span>&gt;</span>
+                          </button>
+                        </div>
+                        
                         <div className="grid grid-cols-7 gap-[5px]">
                           {daysOfWeek.map((day, idx) => (
                             <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
                           ))}
-                          {generateCalendarDays(year, month).map((day, idx) => (
+                          {generateCalendarDays(calendarYear, calendarMonth).map((day, idx) => (
                             <div
                               key={idx}
                               onClick={() => handleDateSelect(day)}
                               className={`text-center text-[14px] py-[8px] cursor-pointer rounded
                                 ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                ${day.isCurrentMonth && startDate && startDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
                                 hover:bg-[#EEF4FF]`}
                             >
                               {day.date}
@@ -1132,35 +1397,158 @@ function ReservationCalendar() {
                           ))}
                         </div>
                         <button 
-                          onClick={() => setShowStartCalendar(false)}
+                          onClick={() => {
+                            setShowStartCalendar(false);
+                            setShowYearDropdown(false);
+                            setShowMonthDropdown(false);
+                          }}
                           className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
                         >
-                          이전달
+                          닫기
                         </button>
                       </div>
                     )}
                     
                     {/* 끝날짜 캘린더 팝업 */}
                     {showEndCalendar && (
-                      <div className="absolute top-[45px] left-[290px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                        <div className="flex items-center justify-between mb-[15px]">
-                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                          <button onClick={() => setMonth(month > 1 ? month - 1 : 12)} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                          <p className="text-[#2754DA] text-[18px] font-medium">{month}월</p>
-                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                          <button onClick={() => setMonth(month < 12 ? month + 1 : 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                      <div className="absolute top-[45px] left-[210px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        {/* 년도 선택 행 */}
+                        <div className="flex items-center justify-between mb-[10px] relative">
+                          <button 
+                            onClick={() => {
+                              if (calendarYear > today.getFullYear() - 50) {
+                                setCalendarYear(calendarYear - 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                            disabled={calendarYear <= today.getFullYear() - 50}
+                          >
+                            <span>&lt;&lt;</span>
+                            <span>이전해</span>
+                          </button>
+                          <div className="relative">
+                            <div 
+                              className="flex items-center gap-[5px] px-[15px] py-[5px] cursor-pointer hover:bg-[#EEF4FF] rounded-[5px]"
+                              onClick={() => {
+                                setShowYearDropdown(!showYearDropdown);
+                                setShowMonthDropdown(false);
+                              }}
+                            >
+                              <p className="text-[#2754DA] text-[18px] font-medium">{calendarYear}년</p>
+                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 1L6 6L11 1" stroke="#2754DA" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                            {showYearDropdown && (
+                              <div className="absolute top-[35px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[120px] max-h-[150px] overflow-y-auto z-10">
+                                {generateYearList().map((y) => (
+                                  <div
+                                    key={y}
+                                    onClick={() => {
+                                      setCalendarYear(y);
+                                      setShowYearDropdown(false);
+                                    }}
+                                    className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                                      y === calendarYear ? 'bg-[#EEF4FF] font-bold' : ''
+                                    }`}
+                                  >
+                                    <p className="text-[#272C3C] text-[14px]">{y}년</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              if (calendarYear < today.getFullYear() + 50) {
+                                setCalendarYear(calendarYear + 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                            disabled={calendarYear >= today.getFullYear() + 50}
+                          >
+                            <span>다음해</span>
+                            <span>&gt;&gt;</span>
+                          </button>
                         </div>
+                        
+                        {/* 월 선택 행 */}
+                        <div className="flex items-center justify-between mb-[15px] relative">
+                          <button 
+                            onClick={() => {
+                              if (calendarMonth === 1) {
+                                setCalendarMonth(12);
+                                setCalendarYear(calendarYear - 1);
+                              } else {
+                                setCalendarMonth(calendarMonth - 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                          >
+                            <span>&lt;</span>
+                            <span>이전달</span>
+                          </button>
+                          <div className="relative">
+                            <div 
+                              className="flex items-center gap-[5px] px-[15px] py-[5px] cursor-pointer hover:bg-[#EEF4FF] rounded-[5px]"
+                              onClick={() => {
+                                setShowMonthDropdown(!showMonthDropdown);
+                                setShowYearDropdown(false);
+                              }}
+                            >
+                              <p className="text-[#2754DA] text-[18px] font-medium">{calendarMonth}월</p>
+                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M1 1L6 6L11 1" stroke="#2754DA" strokeWidth="2" strokeLinecap="round"/>
+                              </svg>
+                            </div>
+                            {showMonthDropdown && (
+                              <div className="absolute top-[35px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[100px] max-h-[180px] overflow-y-auto z-10">
+                                {generateMonthList().map((m) => (
+                                  <div
+                                    key={m}
+                                    onClick={() => {
+                                      setCalendarMonth(m);
+                                      setShowMonthDropdown(false);
+                                    }}
+                                    className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                                      m === calendarMonth ? 'bg-[#EEF4FF] font-bold' : ''
+                                    }`}
+                                  >
+                                    <p className="text-[#272C3C] text-[14px]">{m}월</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button 
+                            onClick={() => {
+                              if (calendarMonth === 12) {
+                                setCalendarMonth(1);
+                                setCalendarYear(calendarYear + 1);
+                              } else {
+                                setCalendarMonth(calendarMonth + 1);
+                              }
+                            }}
+                            className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[5px] hover:bg-[#EEF4FF] text-[#2754DA] text-[14px] font-medium"
+                          >
+                            <span>다음달</span>
+                            <span>&gt;</span>
+                          </button>
+                        </div>
+                        
                         <div className="grid grid-cols-7 gap-[5px]">
                           {daysOfWeek.map((day, idx) => (
                             <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
                           ))}
-                          {generateCalendarDays(year, month).map((day, idx) => (
+                          {generateCalendarDays(calendarYear, calendarMonth).map((day, idx) => (
                             <div
                               key={idx}
                               onClick={() => handleDateSelect(day)}
                               className={`text-center text-[14px] py-[8px] cursor-pointer rounded
                                 ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                                ${day.isCurrentMonth && endDate && endDate.includes(`${day.year}-${String(day.month).padStart(2, '0')}-${String(day.date).padStart(2, '0')}`) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
                                 hover:bg-[#EEF4FF]`}
                             >
                               {day.date}
@@ -1168,57 +1556,20 @@ function ReservationCalendar() {
                           ))}
                         </div>
                         <button 
-                          onClick={() => setShowEndCalendar(false)}
+                          onClick={() => {
+                            setShowEndCalendar(false);
+                            setShowYearDropdown(false);
+                            setShowMonthDropdown(false);
+                          }}
                           className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
                         >
-                          이전달
+                          닫기
                         </button>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Type selector - Right side */}
-                <div className="flex items-start gap-[10px] relative">
-                  <div className="flex w-[67px] py-[8px] px-[10px] items-center gap-[10px]">
-                    <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">타입</p>
-                  </div>
-                  <div className="flex h-[37px] items-center gap-[5px]">
-                    <div 
-                      className="flex w-[184px] h-[37px] py-[9px] px-[10px] pr-[20px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white cursor-pointer"
-                      onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-                    >
-                      <p className={`font-pretendard text-[16px] font-normal leading-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`}>
-                        {selectedType || '타입 선택'}
-                      </p>
-                      <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </div>
-                    {showTypeDropdown && (
-                      <div className="absolute top-[45px] left-[80px] z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
-                        <div 
-                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
-                          onClick={() => {
-                            setSelectedType('일반예약');
-                            setShowTypeDropdown(false);
-                          }}
-                        >
-                          <p className="text-[#272C3C] font-pretendard text-[16px]">일반예약</p>
-                        </div>
-                        <div 
-                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
-                          onClick={() => {
-                            setSelectedType('선예약');
-                            setShowTypeDropdown(false);
-                          }}
-                        >
-                          <p className="text-[#272C3C] font-pretendard text-[16px]">선예약</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
               </div>
 
               {/* Boat selector - Second row */}
@@ -1279,11 +1630,37 @@ function ReservationCalendar() {
                 </svg>
               </button>
               
-              <div className="flex py-[5px] px-[12px] pl-[15px] justify-center items-center gap-[10px] rounded-[10px]">
-                <p className="text-[#121212] font-pretendard text-[30px] font-normal leading-normal">{year}년</p>
-                <svg width="24" height="21" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.3594 13.8525C9.76657 14.751 8.44827 14.751 7.85541 13.8525L0.249952 2.32611C-0.408086 1.32883 0.307147 8.89308e-08 1.50197 1.93385e-07L16.7129 1.52317e-06C17.9077 1.62762e-06 18.6229 1.32883 17.9649 2.32612L10.3594 13.8525Z" fill="#2754DA"/>
-                </svg>
+              <div className="relative">
+                <div 
+                  className="main-year-button flex py-[5px] px-[12px] pl-[15px] justify-center items-center gap-[10px] rounded-[10px] cursor-pointer hover:bg-[#EEF4FF]"
+                  onClick={() => {
+                    setShowMainYearDropdown(!showMainYearDropdown);
+                    setShowMainMonthDropdown(false);
+                  }}
+                >
+                  <p className="text-[#121212] font-pretendard text-[30px] font-normal leading-normal">{year}년</p>
+                  <svg width="24" height="21" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.3594 13.8525C9.76657 14.751 8.44827 14.751 7.85541 13.8525L0.249952 2.32611C-0.408086 1.32883 0.307147 8.89308e-08 1.50197 1.93385e-07L16.7129 1.52317e-06C17.9077 1.62762e-06 18.6229 1.32883 17.9649 2.32612L10.3594 13.8525Z" fill="#2754DA"/>
+                  </svg>
+                </div>
+                {showMainYearDropdown && (
+                  <div className="main-year-dropdown absolute top-[45px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[120px] max-h-[150px] overflow-y-auto z-50">
+                    {generateYearList().map((y) => (
+                      <div
+                        key={y}
+                        onClick={() => {
+                          setYear(y);
+                          setShowMainYearDropdown(false);
+                        }}
+                        className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                          y === year ? 'bg-[#EEF4FF] font-bold' : ''
+                        }`}
+                      >
+                        <p className="text-[#272C3C] text-[14px]">{y}년</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button 
@@ -1311,11 +1688,37 @@ function ReservationCalendar() {
                 <span className="text-[#272C3C] font-pretendard text-[18px] font-medium leading-normal">이전달</span>
               </button>
 
-              <div className="flex w-[155px] py-[5px] px-[12px] pl-[16px] justify-center items-center gap-[10px] rounded-[10px]">
-                <p className="text-[#121212] font-pretendard text-[40px] font-medium leading-normal">{month}월</p>
-                <svg width="24" height="21" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M10.3594 13.8525C9.76657 14.751 8.44827 14.751 7.85541 13.8525L0.249952 2.32611C-0.408086 1.32883 0.307147 8.89308e-08 1.50197 1.93385e-07L16.7129 1.52317e-06C17.9077 1.62762e-06 18.6229 1.32883 17.9649 2.32612L10.3594 13.8525Z" fill="#2754DA"/>
-                </svg>
+              <div className="relative">
+                <div 
+                  className="main-month-button flex w-[155px] py-[5px] px-[12px] pl-[16px] justify-center items-center gap-[10px] rounded-[10px] cursor-pointer hover:bg-[#EEF4FF]"
+                  onClick={() => {
+                    setShowMainMonthDropdown(!showMainMonthDropdown);
+                    setShowMainYearDropdown(false);
+                  }}
+                >
+                  <p className="text-[#121212] font-pretendard text-[40px] font-medium leading-normal">{month}월</p>
+                  <svg width="24" height="21" viewBox="0 0 19 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10.3594 13.8525C9.76657 14.751 8.44827 14.751 7.85541 13.8525L0.249952 2.32611C-0.408086 1.32883 0.307147 8.89308e-08 1.50197 1.93385e-07L16.7129 1.52317e-06C17.9077 1.62762e-06 18.6229 1.32883 17.9649 2.32612L10.3594 13.8525Z" fill="#2754DA"/>
+                  </svg>
+                </div>
+                {showMainMonthDropdown && (
+                  <div className="main-month-dropdown absolute top-[50px] left-0 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[100px] max-h-[180px] overflow-y-auto z-50">
+                    {generateMonthList().map((m) => (
+                      <div
+                        key={m}
+                        onClick={() => {
+                          setMonth(m);
+                          setShowMainMonthDropdown(false);
+                        }}
+                        className={`px-[15px] py-[8px] cursor-pointer hover:bg-[#EEF4FF] ${
+                          m === month ? 'bg-[#EEF4FF] font-bold' : ''
+                        }`}
+                      >
+                        <p className="text-[#272C3C] text-[14px]">{m}월</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <button 
