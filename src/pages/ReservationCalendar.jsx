@@ -1099,6 +1099,20 @@ function ReservationCalendar() {
     }
   };
 
+  // 기본 상태로 초기화
+  const handleResetFilters = () => {
+    const today = new Date();
+    setStartDate('');
+    setEndDate('');
+    setSelectedBoat('');
+    setSelectedType('');
+    setYear(today.getFullYear());
+    setMonth(today.getMonth() + 1);
+    setShowStartCalendar(false);
+    setShowEndCalendar(false);
+    setShowTypeDropdown(false);
+  };
+
   // Split data into weeks
   const weeks = [];
   for (let i = 0; i < calendarData.length; i += 7) {
@@ -1170,14 +1184,26 @@ function ReservationCalendar() {
         <div className="flex px-[42px] flex-col items-start gap-[10px] self-stretch">
           <div className="flex w-full mx-auto py-[40px] px-[60px] flex-col justify-center items-start gap-[40px] rounded-[20px] bg-[#F7F8FC] shadow-[0_4px_4px_0_rgba(39,84,218,0.2)]">
             {/* Title and Description */}
-            <div className="flex flex-col items-start gap-[10px]">
-              <h1 className="text-[#272C3C] font-pretendard text-[30px] font-bold leading-normal">
-                예약달력
-              </h1>
-              <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">
-                예약달력을 관리할 수 있습니다. <br />
-                아래의 날짜 설정기능을 이용해 기간별 배 지정을 간편히 할 수 있습니다.
-              </p>
+            <div className="flex flex-col items-start gap-[10px] w-full">
+              <div className="flex justify-between items-center w-full">
+                <div className="flex flex-col items-start gap-[10px]">
+                  <h1 className="text-[#272C3C] font-pretendard text-[30px] font-bold leading-normal">
+                    예약달력
+                  </h1>
+                  <p className="text-[#272C3C] font-pretendard text-[18px] font-normal leading-normal">
+                    예약달력을 관리할 수 있습니다. <br />
+                    아래의 날짜 설정기능을 이용해 기간별 배 지정을 간편히 할 수 있습니다.
+                  </p>
+                </div>
+                <button 
+                  onClick={handleResetFilters}
+                  className="flex py-[9px] px-[20px] justify-center items-center gap-[10px] rounded-[20px] border border-[#BDBDBD] bg-white cursor-pointer hover:opacity-80 transition-opacity"
+                >
+                  <span className="text-[#1840B8] font-pretendard text-[16px] font-medium leading-normal">
+                    기본으로 돌아가기
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Filter section */}
