@@ -58,21 +58,71 @@ function SMSHistory() {
         if (Array.isArray(result)) {
           smsData = result;
         } else if (result.success && result.data) {
-          smsData = Array.isArray(result.data) ? result.data : 
-                   (result.data.content ? result.data.content : []);
+          // result.data가 배열인 경우
+          if (Array.isArray(result.data)) {
+            smsData = result.data;
+          } 
+          // result.data.content가 배열인 경우 (페이지네이션 응답)
+          else if (result.data.content && Array.isArray(result.data.content)) {
+            smsData = result.data.content;
+          }
+          // result.data가 객체이지만 content가 없는 경우
+          else {
+            smsData = [];
+          }
         } else if (result.data) {
           smsData = Array.isArray(result.data) ? result.data : [];
         }
         
-        const formattedData = smsData.map((sms, index) => ({
+        const formattedData = smsData.map((sms, index) => {
+          // 발송 시각 필드 매핑 (timeStamp 우선)
+          const sendTimeValue = sms.timeStamp || 
+                               sms.sendTime || 
+                               sms.sentAt || 
+                               sms.createdAt || 
+                               sms.sentTime ||
+                               sms.sendAt ||
+                               sms.timestamp ||
+                               sms.date ||
+                               '';
+          
+          // 날짜 포맷팅 (ISO 형식인 경우)
+          let formattedTime = sendTimeValue;
+          if (sendTimeValue && sendTimeValue.includes('T')) {
+            try {
+              const date = new Date(sendTimeValue);
+              if (!isNaN(date.getTime())) {
+                formattedTime = `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+              }
+            } catch (e) {
+              // 포맷팅 실패 시 원본 값 유지
+            }
+          }
+          
+          // SMS 종류 판단 (content에서 추출)
+          let smsType = '사용중';
+          if (sms.content) {
+            if (sms.content.includes('예약 접수 확인')) {
+              smsType = '예약접수';
+            } else if (sms.content.includes('출항을 확정')) {
+              smsType = '출항확정';
+            } else if (sms.content.includes('예약 취소')) {
+              smsType = '예약취소';
+            } else if (sms.content.includes('출항보류')) {
+              smsType = '출항보류';
+            } else if (sms.content.includes('출항 취소')) {
+              smsType = '출항취소';
+            }
+          }
+          
+          return {
           id: sms.id || sms.smsId || (page * 10 + index + 1),
-          smsType: sms.smsType || sms.type || '사용중',
-          name: sms.name || sms.templateName || '',
-          contact: sms.contact || sms.recipientName || sms.name || '',
+            smsType: sms.smsType || sms.type || smsType,
           phone: sms.phone || sms.phoneNumber || sms.recipientPhone || '',
-          sendTime: sms.sendTime || sms.sentAt || sms.createdAt || '',
+            sendTime: formattedTime,
           status: sms.status || (sms.result === 'SUCCESS' ? '발송완료' : sms.result === 'FAILURE' ? '발송실패' : '발송완료')
-        }));
+          };
+        });
         
         setSmsHistoryData(formattedData);
       } else {
@@ -242,217 +292,208 @@ function SMSHistory() {
             </p>
 
             <div className="flex flex-col gap-[13px] pt-[10px]">
-              <div className="flex items-center gap-[10px]">
-                <div className="flex items-center px-[10px] py-[8px] w-[67px]">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-[10px]">
+                  <div className="flex items-center px-[10px] py-[8px] w-[67px]">
                     <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>날짜</span>
+                  </div>
+                  <div className="flex items-center gap-[12px] relative">
+                    <div 
+                      className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
+                      onClick={() => {
+                        setShowStartCalendar(!showStartCalendar);
+                        setShowEndCalendar(false);
+                        setShowStatusDropdown(false);
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
+                      </svg>
+                      <span className={`text-[16px] font-normal ${startDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'} flex-1`} style={{ fontFamily: 'Pretendard' }}>
+                        {startDate || '시작날짜'}
+                      </span>
+                    </div>
+                    <div className="flex justify-center items-center px-[10px] py-[9px] w-[28px]">
+                      <span className="text-[16px] font-semibold text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>-</span>
+                    </div>
+                    <div 
+                      className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
+                      onClick={() => {
+                        setShowEndCalendar(!showEndCalendar);
+                        setShowStartCalendar(false);
+                        setShowStatusDropdown(false);
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
+                      </svg>
+                      <span className={`text-[16px] font-normal ${endDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'} flex-1`} style={{ fontFamily: 'Pretendard' }}>
+                        {endDate || '끝날짜'}
+                      </span>
+                    </div>
+                    
+                    {/* 시작날짜 캘린더 팝업 */}
+                    {showStartCalendar && (
+                      <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => {
+                            if (month === 1) {
+                              setMonth(12);
+                              setYear(year - 1);
+                            } else {
+                              setMonth(month - 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
+                          <button onClick={() => {
+                            if (month === 12) {
+                              setMonth(1);
+                              setYear(year + 1);
+                            } else {
+                              setMonth(month + 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowStartCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* 끝날짜 캘린더 팝업 */}
+                    {showEndCalendar && (
+                      <div className="absolute top-[45px] left-[210px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
+                        <div className="flex items-center justify-between mb-[15px]">
+                          <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
+                          <button onClick={() => {
+                            if (month === 1) {
+                              setMonth(12);
+                              setYear(year - 1);
+                            } else {
+                              setMonth(month - 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
+                          <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
+                          <button onClick={() => {
+                            if (month === 12) {
+                              setMonth(1);
+                              setYear(year + 1);
+                            } else {
+                              setMonth(month + 1);
+                            }
+                          }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
+                          <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                        </div>
+                        <div className="grid grid-cols-7 gap-[5px]">
+                          {daysOfWeek.map((day, idx) => (
+                            <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
+                          ))}
+                          {generateCalendarDays(year, month).map((day, idx) => (
+                            <div
+                              key={idx}
+                              onClick={() => handleDateSelect(day)}
+                              className={`text-center text-[14px] py-[8px] cursor-pointer rounded
+                                ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
+                                ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
+                                ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
+                                hover:bg-[#EEF4FF]`}
+                            >
+                              {day.date}
+                            </div>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => setShowEndCalendar(false)}
+                          className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
+                        >
+                          닫기
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-[12px] relative">
-                  <div 
-                    className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
-                    onClick={() => {
-                      setShowStartCalendar(!showStartCalendar);
-                      setShowEndCalendar(false);
-                      setShowStatusDropdown(false);
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
-                    </svg>
-                    <span className={`text-[16px] font-normal ${startDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'} flex-1`} style={{ fontFamily: 'Pretendard' }}>
-                      {startDate || '시작날짜'}
-                    </span>
+
+                <div className="flex items-center gap-[10px]">
+                  <div className="flex items-center px-[10px] py-[8px] w-[67px]">
+                    <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>발송여부</span>
                   </div>
-                  <div className="flex justify-center items-center px-[10px] py-[9px] w-[28px]">
-                    <span className="text-[16px] font-semibold text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>-</span>
-                  </div>
-                  <div 
-                    className="flex items-center gap-[10px] px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] cursor-pointer"
-                    onClick={() => {
-                      setShowEndCalendar(!showEndCalendar);
-                      setShowStartCalendar(false);
-                      setShowStatusDropdown(false);
-                    }}
-                  >
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M16 8V14.2222C16 14.6937 15.8127 15.1459 15.4793 15.4793C15.1459 15.8127 14.6937 16 14.2222 16H1.77778C1.30628 16 0.854097 15.8127 0.520699 15.4793C0.187301 15.1459 0 14.6937 0 14.2222V8H16ZM11.5556 0C11.7913 0 12.0174 0.0936505 12.1841 0.260349C12.3508 0.427048 12.4444 0.653141 12.4444 0.888889V1.77778H14.2222C14.6937 1.77778 15.1459 1.96508 15.4793 2.29848C15.8127 2.63187 16 3.08406 16 3.55556V6.22222H0V3.55556C0 3.08406 0.187301 2.63187 0.520699 2.29848C0.854097 1.96508 1.30628 1.77778 1.77778 1.77778H3.55556V0.888889C3.55556 0.653141 3.64921 0.427048 3.81591 0.260349C3.9826 0.0936505 4.2087 0 4.44444 0C4.68019 0 4.90628 0.0936505 5.07298 0.260349C5.23968 0.427048 5.33333 0.653141 5.33333 0.888889V1.77778H10.6667V0.888889C10.6667 0.653141 10.7603 0.427048 10.927 0.260349C11.0937 0.0936505 11.3198 0 11.5556 0Z" fill="#BDBDBD"/>
-                        </svg>
-                    <span className={`text-[16px] font-normal ${endDate ? 'text-[#272C3C]' : 'text-[#BDBDBD]'} flex-1`} style={{ fontFamily: 'Pretendard' }}>
-                      {endDate || '끝날짜'}
-                    </span>
-                  </div>
-                  
-                  {/* 시작날짜 캘린더 팝업 */}
-                  {showStartCalendar && (
-                    <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                      <div className="flex items-center justify-between mb-[15px]">
-                        <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                        <button onClick={() => {
-                          if (month === 1) {
-                            setMonth(12);
-                            setYear(year - 1);
-                          } else {
-                            setMonth(month - 1);
-                          }
-                        }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                        <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
-                        <button onClick={() => {
-                          if (month === 12) {
-                            setMonth(1);
-                            setYear(year + 1);
-                          } else {
-                            setMonth(month + 1);
-                          }
-                        }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                        <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
-                      </div>
-                      <div className="grid grid-cols-7 gap-[5px]">
-                        {daysOfWeek.map((day, idx) => (
-                          <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
-                        ))}
-                        {generateCalendarDays(year, month).map((day, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleDateSelect(day)}
-                            className={`text-center text-[14px] py-[8px] cursor-pointer rounded
-                              ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                              ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
-                              ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
-                              ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
-                              hover:bg-[#EEF4FF]`}
-                          >
-                            {day.date}
-                          </div>
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => setShowStartCalendar(false)}
-                        className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
-                      >
-                        닫기
-                      </button>
+                  <div className="flex items-center gap-[5px] h-[37px] relative">
+                    <div 
+                      className="flex justify-between items-center px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px] cursor-pointer"
+                      onClick={() => {
+                        setShowStatusDropdown(!showStatusDropdown);
+                        setShowStartCalendar(false);
+                        setShowEndCalendar(false);
+                      }}
+                    >
+                      <span className={`text-[16px] font-normal ${selectedStatus ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
+                        {selectedStatus || '발송여부 선택'}
+                      </span>
+                      <svg width="20" height="27" viewBox="0 0 20 27" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5 11L10 17L15 11" stroke="#BDBDBD" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
                     </div>
-                  )}
-                  
-                  {/* 끝날짜 캘린더 팝업 */}
-                  {showEndCalendar && (
-                    <div className="absolute top-[45px] left-[210px] z-50 bg-white rounded-[10px] shadow-lg p-[20px] border border-[#E7E7E7]">
-                      <div className="flex items-center justify-between mb-[15px]">
-                        <button onClick={() => setYear(year - 1)} className="text-[#2754DA] text-[20px] font-bold">&lt;&lt;</button>
-                        <button onClick={() => {
-                          if (month === 1) {
-                            setMonth(12);
-                            setYear(year - 1);
-                          } else {
-                            setMonth(month - 1);
-                          }
-                        }} className="text-[#2754DA] text-[20px] font-bold">&lt;</button>
-                        <p className="text-[#2754DA] text-[18px] font-medium">{year}년 {month}월</p>
-                        <button onClick={() => {
-                          if (month === 12) {
-                            setMonth(1);
-                            setYear(year + 1);
-                          } else {
-                            setMonth(month + 1);
-                          }
-                        }} className="text-[#2754DA] text-[20px] font-bold">&gt;</button>
-                        <button onClick={() => setYear(year + 1)} className="text-[#2754DA] text-[20px] font-bold">&gt;&gt;</button>
+                    {showStatusDropdown && (
+                      <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
+                        <div 
+                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
+                          onClick={() => {
+                            setSelectedStatus('성공');
+                            setShowStatusDropdown(false);
+                          }}
+                        >
+                          <p className="text-[#272C3C] font-pretendard text-[16px]">성공</p>
+                        </div>
+                        <div 
+                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer"
+                          onClick={() => {
+                            setSelectedStatus('실패');
+                            setShowStatusDropdown(false);
+                          }}
+                        >
+                          <p className="text-[#272C3C] font-pretendard text-[16px]">실패</p>
+                        </div>
+                        <div 
+                          className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
+                          onClick={() => {
+                            setSelectedStatus('');
+                            setShowStatusDropdown(false);
+                          }}
+                        >
+                          <p className="text-[#272C3C] font-pretendard text-[16px]">발송여부 선택</p>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-7 gap-[5px]">
-                        {daysOfWeek.map((day, idx) => (
-                          <div key={idx} className="text-center text-[14px] font-medium py-[5px]">{day}</div>
-                        ))}
-                        {generateCalendarDays(year, month).map((day, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => handleDateSelect(day)}
-                            className={`text-center text-[14px] py-[8px] cursor-pointer rounded
-                              ${day.isPrevMonth || day.isNextMonth ? 'text-[#BDBDBD]' : 'text-[#272C3C]'}
-                              ${isStartDate(day) ? 'bg-[#2754DA] text-white' : ''}
-                              ${isEndDate(day) ? 'bg-[#2754DA] text-white' : ''}
-                              ${isDateInRange(day) && !isStartDate(day) && !isEndDate(day) ? 'bg-[#EEF4FF]' : ''}
-                              hover:bg-[#EEF4FF]`}
-                          >
-                            {day.date}
-                          </div>
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => setShowEndCalendar(false)}
-                        className="mt-[15px] w-full py-[8px] bg-[#EEF4FF] text-[#2754DA] rounded-[5px] font-medium"
-                      >
-                        닫기
-                      </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-start gap-[10px] h-[37px] relative">
-                <div className="flex items-center px-[10px] py-[8px] w-[67px]">
-                  <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>발송여부</span>
-                </div>
-                <div className="flex items-center gap-[5px] h-[37px] relative">
-                  <div 
-                    className="flex justify-between items-center px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px] cursor-pointer"
-                    onClick={() => {
-                      setShowStatusDropdown(!showStatusDropdown);
-                      setShowStartCalendar(false);
-                      setShowEndCalendar(false);
-                    }}
-                  >
-                    <span className={`text-[16px] font-normal ${selectedStatus ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
-                      {selectedStatus || '발송여부 선택'}
-                    </span>
-                    <svg width="20" height="27" viewBox="0 0 20 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5 11L10 17L15 11" stroke="#BDBDBD" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  {showStatusDropdown && (
-                    <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
-                      <div 
-                        className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
-                        onClick={() => {
-                          setSelectedStatus('성공');
-                          setShowStatusDropdown(false);
-                        }}
-                      >
-                        <p className="text-[#272C3C] font-pretendard text-[16px]">성공</p>
-                      </div>
-                      <div 
-                        className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer"
-                        onClick={() => {
-                          setSelectedStatus('실패');
-                          setShowStatusDropdown(false);
-                        }}
-                      >
-                        <p className="text-[#272C3C] font-pretendard text-[16px]">실패</p>
-                      </div>
-                      <div 
-                        className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
-                        onClick={() => {
-                          setSelectedStatus('');
-                          setShowStatusDropdown(false);
-                        }}
-                      >
-                        <p className="text-[#272C3C] font-pretendard text-[16px]">발송여부 선택</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className="flex items-start gap-[10px]">
-                  <div className="flex w-[67px] px-[10px] py-[8px] items-center gap-[10px]">
-                    <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>배</span>
-                  </div>
-                  <div className="flex w-[184px] h-[37px] px-[20px] py-[9px] justify-between items-center rounded-[10px] border border-[#BDBDBD] bg-white">
-                    <span className="text-[16px] font-normal text-[#BDBDBD]" style={{ fontFamily: 'Pretendard' }}>배 선택</span>
-                    <svg width="20" height="27" viewBox="0 0 20 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M5 11L10 17L15 11" stroke="#BDBDBD" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
+              <div className="flex justify-end items-center">
                 <div className="flex px-[10px] items-center gap-[10px]">
                   <button
                     onClick={handleReset}
@@ -516,13 +557,10 @@ function SMSHistory() {
                     <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
                       <span className="text-[20px] font-medium text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>SMS 종류</span>
                     </div>
-                    <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
-                      <span className="text-[20px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>이름</span>
-                    </div>
                     <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
                       <span className="text-[20px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>연락처</span>
                     </div>
-                    <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
+                    <div className="flex w-[200px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
                       <span className="text-[20px] font-medium text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>발송시각</span>
                     </div>
                     <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-[#EEF4FF] h-[45px]">
@@ -579,13 +617,10 @@ function SMSHistory() {
                       <div className="flex w-[153px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap text-center" style={{ fontFamily: 'Pretendard' }}>{row.smsType || 'N/A'}</span>
                       </div>
-                      <div className="flex w-[155px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
-                          <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.contact || 'N/A'}</span>
-                      </div>
                       <div className="flex w-[243px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.phone || 'N/A'}</span>
                       </div>
-                      <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
+                      <div className="flex w-[200px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
                           <span className="text-[20px] font-normal text-[#272C3C] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center" style={{ fontFamily: 'Pretendard' }}>{row.sendTime || 'N/A'}</span>
                       </div>
                       <div className="flex w-[151px] px-[20px] py-[12px] justify-center items-center gap-[10px] border-2 border-[#DFE7F4] bg-white h-[48px]">
@@ -597,86 +632,87 @@ function SMSHistory() {
                 </div>
               </div>
 
-              {(() => {
-                const totalPages = Math.ceil(smsHistoryData.length / itemsPerPage);
-                return smsHistoryData.length > itemsPerPage && totalPages > 0 && (
-                  <div className="flex w-full max-w-[1056px] py-[50px] justify-center items-center gap-[10px] bg-white">
+            {(() => {
+              const totalPages = Math.ceil(smsHistoryData.length / itemsPerPage);
+              if (smsHistoryData.length <= itemsPerPage || totalPages <= 0) return null;
+              return (
+                <div className="flex w-full max-w-[1056px] py-[50px] justify-center items-center gap-[10px] bg-white">
                 <div className="flex items-center gap-[20px]">
-                      <button
-                        onClick={() => handlePageChange(0)}
-                        disabled={currentPage === 0}
-                        className="disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <button
+                      onClick={() => handlePageChange(0)}
+                      disabled={currentPage === 0}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M30 11L20 20.5L30 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                      </button>
-                      <button
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 0}
-                        className="disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 0}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M20 11L10 20.5L20 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                      </button>
-                </div>
-
-                <div className="flex items-center gap-[4px]">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i;
-                        } else if (currentPage < 3) {
-                          pageNum = i;
-                        } else if (currentPage > totalPages - 4) {
-                          pageNum = totalPages - 5 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={i}
-                            onClick={() => handlePageChange(pageNum)}
-                            className={`flex w-[40px] px-[10px] py-[10px] flex-col justify-center items-center gap-[10px] rounded-[5px] ${
-                              currentPage === pageNum ? 'border border-[#73757C] bg-[#F2F2F2]' : ''
-                            }`}
-                          >
-                            <div className="text-center font-medium text-[18px] leading-normal text-[#73757C]" 
-                                 style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}>
-                              {pageNum + 1}
+                    </button>
                   </div>
-                          </button>
-                        );
-                      })}
+
+                  <div className="flex items-center gap-[4px]">
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i;
+                      } else if (currentPage < 3) {
+                        pageNum = i;
+                      } else if (currentPage > totalPages - 4) {
+                        pageNum = totalPages - 5 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`flex w-[40px] px-[10px] py-[10px] flex-col justify-center items-center gap-[10px] rounded-[5px] ${
+                            currentPage === pageNum ? 'border border-[#73757C] bg-[#F2F2F2]' : ''
+                          }`}
+                        >
+                          <div className="text-center font-medium text-[18px] leading-normal text-[#73757C]" 
+                               style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}>
+                            {pageNum + 1}
+                  </div>
+                        </button>
+                      );
+                    })}
                   </div>
 
                 <div className="flex items-center gap-[20px]">
-                      <button
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage >= totalPages - 1}
-                        className="disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage >= totalPages - 1}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="30" height="41" viewBox="0 0 30 41" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M10 11L20 20.5L10 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                      </button>
-                      <button
-                        onClick={() => handlePageChange(totalPages - 1)}
-                        disabled={currentPage >= totalPages - 1}
-                        className="disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(totalPages - 1)}
+                      disabled={currentPage >= totalPages - 1}
+                      className="disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <svg width="32" height="41" viewBox="0 0 32 41" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1.5 11L11.5 20.5L1.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                     <path d="M11.5 11L21.5 20.5L11.5 30" stroke="#73757C" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                      </button>
+                    </button>
+                  </div>
                 </div>
-              </div>
-                );
-              })()}
+              );
+            })()}
             </div>
           </div>
         </div>

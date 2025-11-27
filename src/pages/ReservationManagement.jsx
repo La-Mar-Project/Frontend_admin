@@ -630,8 +630,13 @@ function ReservationManagement() {
         const result = await response.json();
         console.log('[ReservationManagement] 예약 상태 변경 성공:', result);
         
-        // 목록 다시 불러오기
-        await fetchReservations();
+        // 검색 필터를 유지하면서 목록 다시 불러오기
+        // 필터 조건이 있으면 handleSearch 호출, 없으면 fetchReservations 호출
+        if (startDate || endDate || selectedBoat || selectedType) {
+          await handleSearch();
+        } else {
+          await fetchReservations();
+        }
         setClickedStatusRowId(null);
       } else {
         const errorText = await response.text().catch(() => '');
@@ -675,9 +680,12 @@ function ReservationManagement() {
             <p className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard', lineHeight: '23px' }}>
               예약기록 및 취소기록을 관리할 수 있습니다.
             </p>
+            <p className="text-[16px] font-normal text-[#73757C]" style={{ fontFamily: 'Pretendard', lineHeight: '20px' }}>
+              예약과 관련된 상태 변경은 해당 페이지에서 관리할 수 있습니다.
+            </p>
 
             <div className="flex flex-col items-start gap-[13px] self-stretch pt-[10px]">
-              {/* 날짜 선택 및 타입 선택 */}
+              {/* 날짜 선택 */}
               <div className="flex items-center justify-between w-full">
                 <div className="flex items-start gap-[10px] flex-1">
                   <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
@@ -691,7 +699,6 @@ function ReservationManagement() {
                       onClick={() => {
                         setShowStartCalendar(!showStartCalendar);
                         setShowEndCalendar(false);
-                        setShowTypeDropdown(false);
                       }}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -711,7 +718,6 @@ function ReservationManagement() {
                       onClick={() => {
                         setShowEndCalendar(!showEndCalendar);
                         setShowStartCalendar(false);
-                        setShowTypeDropdown(false);
                       }}
                     >
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -825,54 +831,6 @@ function ReservationManagement() {
                         </button>
                       </div>
                     )}
-              </div>
-
-                  {/* 타입 선택 (날짜 오른쪽) */}
-                  <div className="flex items-start gap-[10px] relative">
-                <div className="flex items-center gap-[10px] px-[10px] py-[8px] w-[67px]">
-                  <span className="text-[18px] font-normal text-[#272C3C]" style={{ fontFamily: 'Pretendard' }}>
-                    타입
-                  </span>
-                </div>
-                    <div className="flex items-center gap-[5px] h-[37px] relative">
-                      <div 
-                        className="flex items-center justify-between px-[20px] py-[9px] rounded-[10px] border border-[#BDBDBD] bg-white w-[184px] h-[37px] cursor-pointer"
-                        onClick={() => {
-                          setShowTypeDropdown(!showTypeDropdown);
-                          setShowStartCalendar(false);
-                          setShowEndCalendar(false);
-                        }}
-                      >
-                        <span className={`text-[16px] font-normal ${selectedType ? 'text-[#272C3C]' : 'text-[#BDBDBD]'}`} style={{ fontFamily: 'Pretendard' }}>
-                          {selectedType || '타입 선택'}
-                    </span>
-                        <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M1 1L6 6L11 1" stroke="#BDBDBD" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                      </div>
-                      {showTypeDropdown && (
-                        <div className="absolute top-[45px] left-0 z-50 bg-white rounded-[10px] shadow-lg border border-[#E7E7E7] w-[184px]">
-                          <div 
-                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-t-[10px]"
-                            onClick={() => {
-                              setSelectedType('일반예약');
-                              setShowTypeDropdown(false);
-                            }}
-                          >
-                            <p className="text-[#272C3C] font-pretendard text-[16px]">일반예약</p>
-                          </div>
-                          <div 
-                            className="px-[15px] py-[10px] hover:bg-[#EEF4FF] cursor-pointer rounded-b-[10px]"
-                            onClick={() => {
-                              setSelectedType('선예약');
-                              setShowTypeDropdown(false);
-                            }}
-                          >
-                            <p className="text-[#272C3C] font-pretendard text-[16px]">선예약</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -911,16 +869,6 @@ function ReservationManagement() {
                   >
                     <span className="text-[16px] font-medium text-[#1840B8]" style={{ fontFamily: 'Pretendard' }}>
                       {loading ? '조회중...' : '검색하기'}
-                    </span>
-                  </button>
-                  <button className="flex items-center justify-center gap-[10px] px-[20px] py-[9px] rounded-[20px] border border-[#BDBDBD] bg-white">
-                    <span className="text-[16px] font-medium text-[#1840B8]" style={{ fontFamily: 'Pretendard' }}>
-                      저장하기
-                    </span>
-                  </button>
-                  <button className="flex items-center justify-center gap-[10px] px-[20px] py-[9px] rounded-[20px] border border-[#BDBDBD] bg-white">
-                    <span className="text-[16px] font-medium text-[#1840B8]" style={{ fontFamily: 'Pretendard' }}>
-                      삭제하기
                     </span>
                   </button>
                 </div>
@@ -1227,11 +1175,11 @@ function ReservationManagement() {
 
       {/* 쿠폰 추가 팝업 */}
       {showCouponModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-[20px] p-[40px] w-[400px]">
-            <h2 className="text-[24px] font-bold mb-[20px] text-[#272C3C] text-center" style={{ fontFamily: 'Pretendard' }}>
+        <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-[#272C3C] rounded-[10px] px-[24px] py-[12px] shadow-lg">
+            <p className="text-[16px] font-medium text-white text-center" style={{ fontFamily: 'Pretendard' }}>
               쿠폰을 추가하였습니다
-            </h2>
+            </p>
           </div>
         </div>
       )}

@@ -366,7 +366,6 @@ function ShipInfo() {
               <div className="text-[#272C3C] font-normal text-[18px] leading-[23px]" 
                    style={{ fontFamily: 'Pretendard, -apple-system, Roboto, Helvetica, sans-serif' }}>
                 배 정보를 등록, 수정, 삭제할 수 있습니다.<br />
-                드래그&드랍으로 배 순서를 조정할 수 있습니다.
               </div>
             </div>
           </div>
