@@ -30,7 +30,7 @@ const addAccessLog = (userId, type, status, name) => {
 // ⚠️ 중요: 이 함수는 토큰을 절대 설정하거나 수정하지 않습니다.
 // 토큰 관리는 Login.jsx에서만 처리하며, 백엔드 JWT 토큰만 사용합니다.
 export const login = (username, password) => {
-  // 기존 백엔드 토큰 보호 (덮어쓰기 방지)
+  // 🔥 백엔드 토큰 백업 (덮어쓰기 방지)
   const existingToken = localStorage.getItem('adminToken');
   const isBackendToken = existingToken && existingToken.length > 400 && existingToken.startsWith('eyJ');
   
@@ -57,13 +57,6 @@ export const login = (username, password) => {
       }
     }
   }
-  
-  // 함수 종료 전 백엔드 토큰이 덮어씌워졌는지 확인 및 복원
-  const tokenAfterCheck = localStorage.getItem('adminToken');
-  if (isBackendToken && tokenAfterCheck !== existingToken) {
-    console.warn('[auth.js] ⚠️ 백엔드 토큰이 변경되었습니다. 복원합니다.');
-    localStorage.setItem('adminToken', existingToken);
-  }
 
   // 로그인 시도 기록 (성공/실패 모두 기록)
   if (loginSuccess) {
@@ -83,6 +76,16 @@ export const login = (username, password) => {
       }
     }
     addAccessLog(username, '로그인', '실패', failureName);
+  }
+
+  // 🔥 함수 종료 전 백엔드 토큰이 덮어씌워졌는지 확인 및 복원
+  const tokenAfterCheck = localStorage.getItem('adminToken');
+  if (isBackendToken && tokenAfterCheck !== existingToken) {
+    console.error('[auth.js] ❌ 백엔드 토큰이 변경되었습니다! 복원합니다.');
+    console.error('[auth.js] 원래 토큰:', existingToken.substring(0, 30) + '...', `(길이: ${existingToken.length})`);
+    console.error('[auth.js] 변경된 토큰:', tokenAfterCheck ? tokenAfterCheck.substring(0, 30) + '...' : '없음', tokenAfterCheck ? `(길이: ${tokenAfterCheck.length})` : '');
+    localStorage.setItem('adminToken', existingToken);
+    console.log('[auth.js] ✅ 백엔드 토큰으로 복원 완료');
   }
 
   return loginSuccess;
