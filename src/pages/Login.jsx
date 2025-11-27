@@ -324,47 +324,29 @@ function Login() {
       
       console.log('[4단계] 접속 기록 저장 완료');
       
+      // 🔥 navigate() 호출 전에 백엔드 토큰으로 강제 설정 (덮어쓰기 방지)
+      localStorage.setItem('adminToken', savedBackendToken);
+      
       console.log('=== [로그인 완료] ===');
       console.log('최종 저장된 데이터:', {
-        adminToken: finalToken.substring(0, 30) + '...',
-        adminToken전체길이: finalToken.length,
+        adminToken: savedBackendToken.substring(0, 30) + '...',
+        adminToken전체길이: savedBackendToken.length,
         adminToken타입: '백엔드 JWT 토큰',
         adminUsername: localStorage.getItem('adminUsername'),
         adminType: localStorage.getItem('adminType')
       });
       
-      // 페이지 이동 전 마지막 확인: 백엔드 토큰이 아니면 로그인 실패
-      let tokenBeforeNavigate = localStorage.getItem('adminToken');
-      
-      // 로컬 토큰이면 백엔드 토큰으로 강제 복원
-      if (tokenBeforeNavigate && isLocalToken(tokenBeforeNavigate)) {
-        console.error('[로그인 완료] ❌ 페이지 이동 전 로컬 토큰 감지! 백엔드 토큰으로 복원합니다.');
-        console.error('[로그인 완료] 로컬 토큰:', tokenBeforeNavigate.substring(0, 50), `(길이: ${tokenBeforeNavigate.length})`);
-        if (savedBackendToken) {
-          localStorage.setItem('adminToken', savedBackendToken);
-          tokenBeforeNavigate = savedBackendToken;
-          console.log('[로그인 완료] ✅ 백엔드 토큰으로 복원 완료');
-        } else {
-          console.error('[로그인 완료] ❌ 백엔드 토큰이 없습니다. 로그인 실패');
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUsername');
-          localStorage.removeItem('adminType');
-          throw new Error('백엔드 토큰이 유지되지 않았습니다. 다시 로그인해주세요.');
-        }
+      // 🔥 페이지 이동 전 최종 확인: 백엔드 토큰만 유지
+      const tokenBeforeNavigate = localStorage.getItem('adminToken');
+      if (tokenBeforeNavigate !== savedBackendToken) {
+        console.error('[로그인 완료] ❌ 페이지 이동 전 토큰이 변경되었습니다! 백엔드 토큰으로 복원합니다.');
+        localStorage.setItem('adminToken', savedBackendToken);
+        console.log('[로그인 완료] ✅ 백엔드 토큰으로 복원 완료');
       }
       
-      // 최종 확인: 백엔드 토큰이 아니면 로그인 실패
-      if (!tokenBeforeNavigate || isLocalToken(tokenBeforeNavigate)) {
-        console.error('[로그인 완료] ❌ 최종 토큰 확인 실패: 백엔드 토큰이 아닙니다.');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUsername');
-        localStorage.removeItem('adminType');
-        throw new Error('백엔드 토큰이 유지되지 않았습니다. 다시 로그인해주세요.');
-      }
-      
-      console.log('[로그인 완료] ✅ 백엔드 토큰 확인 완료:', {
-        토큰: tokenBeforeNavigate.substring(0, 30) + '...',
-        길이: tokenBeforeNavigate.length,
+      console.log('[로그인 완료] ✅ 백엔드 JWT 토큰 확인 완료:', {
+        토큰: savedBackendToken.substring(0, 30) + '...',
+        길이: savedBackendToken.length,
         타입: '백엔드 JWT 토큰'
       });
       console.log('[로그인 완료] ✅ 대시보드로 이동합니다.');
