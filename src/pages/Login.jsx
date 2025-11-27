@@ -312,16 +312,6 @@ function Login() {
         console.log('[4단계] ✅ 백엔드 토큰으로 강제 복원 완료');
       }
       
-      // 최종 확인: 백엔드 토큰이 아니면 로그인 실패
-      const finalToken = localStorage.getItem('adminToken');
-      if (!finalToken || isLocalToken(finalToken)) {
-        console.error('[4단계] ❌ 최종 토큰 확인 실패: 백엔드 토큰이 아닙니다.');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUsername');
-        localStorage.removeItem('adminType');
-        throw new Error('백엔드 토큰으로 로그인할 수 없습니다. 다시 시도해주세요.');
-      }
-      
       console.log('[4단계] 접속 기록 저장 완료');
       
       // 🔥 navigate() 호출 전에 백엔드 토큰으로 강제 설정 (덮어쓰기 방지)
