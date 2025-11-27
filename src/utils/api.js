@@ -1,6 +1,7 @@
 /**
  * API 유틸리티 함수
  * 백엔드 API 호출을 위한 공통 함수들
+ * 로컬 토큰은 자동으로 감지되어 제거되며, 백엔드 JWT 토큰만 사용됩니다.
  */
 
 // 환경 변수에서 API 기본 URL 가져오기
@@ -37,50 +38,27 @@ export const apiRequest = async (endpoint, options = {}) => {
     'Content-Type': 'application/json',
   };
 
-  // 토큰이 있으면 Authorization 헤더 추가 (localStorage에서 가져오기)
-  // adminToken 또는 token 둘 다 확인
+  // 토큰 가져오기 (localStorage에서)
   let token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-  
-  // 로컬 토큰 감지 및 거부 (백엔드 JWT 토큰만 허용)
-  const isLocalToken = (token) => {
-    if (!token) return false;
-    // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
-    // 로컬 토큰은 짧고 base64 인코딩된 username:timestamp 형태 (보통 20-50자)
-    const isJWT = token.length >= 400 && token.startsWith('eyJ');
-    return !isJWT;
-  };
-  
-  // 로컬 토큰이면 즉시 제거하고 경고
-  if (token && isLocalToken(token)) {
-    console.error('[API Request] ❌❌❌ 로컬 토큰이 감지되었습니다! 즉시 제거합니다.');
-    console.error('[API Request] 로컬 토큰:', token.substring(0, 50), `(길이: ${token.length})`);
-    console.error('[API Request] 토큰 전체:', token);
-    // 모든 토큰 관련 localStorage 항목 제거
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('token');
-    localStorage.removeItem('adminUsername');
-    localStorage.removeItem('adminType');
-    token = null;
-    console.warn('[API Request] ⚠️ 로컬 토큰을 제거했습니다. 백엔드 JWT 토큰으로 다시 로그인해주세요.');
-    // 로컬 토큰이면 API 요청을 중단하고 에러 발생
-    throw new Error('로컬 토큰이 감지되었습니다. 백엔드 토큰으로 다시 로그인해주세요.');
-  }
   
   console.log('[API Request] localStorage에서 토큰 확인:', {
     adminToken: localStorage.getItem('adminToken') ? localStorage.getItem('adminToken').substring(0, 30) + '...' : '없음',
     token: localStorage.getItem('token') ? localStorage.getItem('token').substring(0, 30) + '...' : '없음',
     사용할토큰: token ? token.substring(0, 30) + '...' : '없음',
-    토큰타입: token ? (isLocalToken(token) ? '로컬토큰(거부됨)' : '백엔드JWT') : '없음',
     토큰길이: token ? token.length : 0
   });
   
+  // 토큰이 있으면 Authorization 헤더에 추가
   if (token) {
     // 토큰에 이미 "Bearer "가 포함되어 있으면 그대로 사용, 없으면 추가
     const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     defaultHeaders['Authorization'] = authHeader;
-    console.log('[API Request] Authorization 헤더 설정:', authHeader.substring(0, 40) + '...');
+    console.log('[API Request] ✅ Authorization 헤더 설정 완료:', {
+      헤더값: authHeader.substring(0, 40) + '...',
+      전체길이: authHeader.length
+    });
   } else {
-    console.warn('[API Request] 토큰이 없어서 Authorization 헤더를 추가하지 않음');
+    console.warn('[API Request] ⚠️ 토큰이 없어서 Authorization 헤더를 추가하지 않음');
   }
 
   // 옵션 병합 (options.headers가 있으면 우선 적용, 없으면 defaultHeaders 사용)
@@ -90,10 +68,15 @@ export const apiRequest = async (endpoint, options = {}) => {
     ...options.headers, // options.headers가 있으면 defaultHeaders를 덮어씀
   };
   
-  // 토큰이 있으면 Authorization 헤더를 항상 설정 (다른 헤더에 의해 덮어써지지 않도록)
+  // 🔥 토큰이 있으면 Authorization 헤더를 항상 설정 (다른 헤더에 의해 덮어써지지 않도록)
+  // 이 부분이 가장 중요: options.headers에 Authorization이 있어도 덮어씀
   if (token) {
     const authHeader = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
     mergedHeaders['Authorization'] = authHeader;
+    console.log('[API Request] 🔥 Authorization 헤더 최종 확인 (덮어쓰기 방지):', {
+      헤더값: authHeader.substring(0, 40) + '...',
+      전체길이: authHeader.length
+    });
   }
   
   const config = {
