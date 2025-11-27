@@ -126,12 +126,32 @@ const isLocalToken = (token) => {
   return token.length < 400 || !token.startsWith('eyJ');
 };
 
+// 로컬 토큰이 있으면 제거하는 함수
+export const removeLocalTokenIfPresent = () => {
+  const token = localStorage.getItem('adminToken');
+  if (token && isLocalToken(token)) {
+    console.warn('[auth.js] ⚠️ 로컬 토큰이 감지되어 제거합니다.');
+    console.warn('[auth.js] 로컬 토큰:', token.substring(0, 50), `(길이: ${token.length})`);
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('token');
+    localStorage.removeItem('adminUsername');
+    localStorage.removeItem('adminType');
+    return true; // 로컬 토큰이 제거되었음을 알림
+  }
+  return false;
+};
+
 // 로그인 여부 확인 (백엔드 토큰만 허용)
 export const isAuthenticated = () => {
+  // 먼저 로컬 토큰이 있으면 제거
+  if (removeLocalTokenIfPresent()) {
+    return false;
+  }
+  
   const token = localStorage.getItem('adminToken');
   if (!token) return false;
   
-  // 로컬 토큰이면 제거하고 false 반환
+  // 로컬 토큰이면 제거하고 false 반환 (이중 체크)
   if (isLocalToken(token)) {
     console.warn('[auth.js] 로컬 토큰이 감지되었습니다. 제거합니다.');
     localStorage.removeItem('adminToken');

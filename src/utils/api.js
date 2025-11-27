@@ -38,11 +38,7 @@ export const apiRequest = async (endpoint, options = {}) => {
     'Content-Type': 'application/json',
   };
 
-  // 토큰이 있으면 Authorization 헤더 추가 (localStorage에서 가져오기)
-  // adminToken 또는 token 둘 다 확인
-  let token = localStorage.getItem('adminToken') || localStorage.getItem('token');
-  
-  // 로컬 토큰 감지 및 거부 (백엔드 JWT 토큰만 허용)
+  // 🔥 로컬 토큰 감지 함수 (백엔드 JWT 토큰만 허용) - 함수 정의를 가장 먼저
   const isLocalToken = (token) => {
     if (!token) return false;
     // 백엔드 JWT 토큰은 400자 이상이고 eyJ로 시작
@@ -51,20 +47,38 @@ export const apiRequest = async (endpoint, options = {}) => {
     return !isJWT;
   };
   
-  // 로컬 토큰이면 즉시 제거하고 경고
-  if (token && isLocalToken(token)) {
-    console.error('[API Request] ❌❌❌ 로컬 토큰이 감지되었습니다! 즉시 제거합니다.');
-    console.error('[API Request] 로컬 토큰:', token.substring(0, 50), `(길이: ${token.length})`);
-    console.error('[API Request] 토큰 전체:', token);
-    // 모든 토큰 관련 localStorage 항목 제거
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('token');
-    localStorage.removeItem('adminUsername');
-    localStorage.removeItem('adminType');
-    token = null;
-    console.warn('[API Request] ⚠️ 로컬 토큰을 제거했습니다. 백엔드 JWT 토큰으로 다시 로그인해주세요.');
-    // 로컬 토큰이면 API 요청을 중단하고 에러 발생
-    throw new Error('로컬 토큰이 감지되었습니다. 백엔드 토큰으로 다시 로그인해주세요.');
+  // 🔥 토큰 가져오기 및 즉시 검증 (가장 먼저 실행)
+  let token = localStorage.getItem('adminToken') || localStorage.getItem('token');
+  
+  // 🔥 로컬 토큰 감지 및 거부 (토큰을 가져온 직후 즉시 실행)
+  if (token) {
+    console.log('[API Request] 🔍 토큰 검증 시작:', {
+      토큰길이: token.length,
+      토큰시작: token.substring(0, 10),
+      전체토큰: token
+    });
+    
+    if (isLocalToken(token)) {
+      console.error('[API Request] ❌❌❌ 로컬 토큰이 감지되었습니다! 즉시 제거합니다.');
+      console.error('[API Request] 로컬 토큰:', token.substring(0, 50), `(길이: ${token.length})`);
+      console.error('[API Request] 토큰 전체:', token);
+      // 모든 토큰 관련 localStorage 항목 제거
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('token');
+      localStorage.removeItem('adminUsername');
+      localStorage.removeItem('adminType');
+      token = null;
+      console.warn('[API Request] ⚠️ 로컬 토큰을 제거했습니다. 백엔드 JWT 토큰으로 다시 로그인해주세요.');
+      // 로컬 토큰이면 API 요청을 중단하고 에러 발생
+      throw new Error('로컬 토큰이 감지되었습니다. 백엔드 토큰으로 다시 로그인해주세요.');
+    } else {
+      console.log('[API Request] ✅ 백엔드 JWT 토큰 확인됨:', {
+        토큰길이: token.length,
+        토큰시작: token.substring(0, 20) + '...'
+      });
+    }
+  } else {
+    console.warn('[API Request] ⚠️ 토큰이 없습니다.');
   }
   
   console.log('[API Request] localStorage에서 토큰 확인:', {
